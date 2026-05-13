@@ -9,6 +9,8 @@ pandas
 numpy
 scikit-learn
 flask-socketio
+eventlet
+gunicorn
 youtube-transcript-api
 chromadb
 pdfplumber

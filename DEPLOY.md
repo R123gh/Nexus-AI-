@@ -19,7 +19,7 @@ Render is great for hosting all three components.
 3. Root Directory: `backend`
 4. Runtime: `Python`
 5. Build Command: `pip install -r requirements.txt`
-6. Start Command: `python app.py` (or `gunicorn app:app`)
+6. Start Command: `gunicorn --worker-class eventlet -w 1 app:app` (or `python app.py`)
 7. **Environment Variables**: Add your `GROQ_API_KEY`, `MONGO_URI`, etc.
 8. Copy the provided URL (e.g., `https://nexus-python.onrender.com`).
 
@@ -74,6 +74,11 @@ Ensure these are set in your deployment platform:
 - `GROQ_API_KEY`: Your Groq Cloud API key.
 - `PYTHON_BASE`: (For Node) The URL where the Python service is hosted.
 - `JWT_SECRET`: A secure random string for authentication.
+
+### 🚩 Common Fixes
+- **ModuleNotFoundError (eventlet/gunicorn)**: Ensure these are in `backend/requirements.txt` (I have added them for you).
+- **CORS Errors**: Check that `PYTHON_BASE` in the Node service doesn't have a trailing slash.
+- **Port Binding**: Render expects the service to listen on `0.0.0.0`.
 
 ---
 
