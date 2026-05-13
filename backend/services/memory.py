@@ -9,6 +9,7 @@ import os
 import threading
 from werkzeug.security import generate_password_hash, check_password_hash
 from config import MAX_HISTORY_PER_SESSION, MONGO_URI
+from datetime import datetime
 from pymongo import MongoClient
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'nexus_memory.db')
