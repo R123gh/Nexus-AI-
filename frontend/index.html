@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>NexusAI — Premium Multi-Modal Assistant</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Sora:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+    
+    <!-- Three.js CDN (using it for the background) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  </head>
+  <body>
+    <!-- Splash Screen -->
+    <div id="splash-screen">
+      <div class="splash-content">
+        <div class="splash-logo">
+          <div class="splash-ring"></div>
+          <div class="splash-ring ring-2"></div>
+          <div class="splash-ring ring-3"></div>
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+        </div>
+        <h1 class="splash-title">NexusAI</h1>
+        <p class="splash-subtitle">Multi-Modal AI Assistant</p>
+        <div class="splash-loader">
+          <div class="splash-loader-bar"></div>
+        </div>
+      </div>
+    </div>
+
+    <canvas id="three-bg"></canvas>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+
+    <style>
+      #splash-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #06060f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        transition: opacity 0.8s ease, visibility 0.8s;
+      }
+      .splash-content { text-align: center; }
+      .splash-logo {
+        position: relative;
+        width: 100px;
+        height: 100px;
+        margin: 0 auto 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .splash-ring {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        border: 2px solid rgba(124, 58, 237, 0.3);
+        border-radius: 50%;
+        animation: splash-pulse 2s infinite ease-out;
+      }
+      .ring-2 { animation-delay: 0.5s; width: 130%; height: 130%; }
+      .ring-3 { animation-delay: 1s; width: 160%; height: 160%; }
+      @keyframes splash-pulse {
+        0% { transform: scale(0.8); opacity: 0; }
+        50% { opacity: 1; }
+        100% { transform: scale(1.2); opacity: 0; }
+      }
+      .splash-title { color: white; font-family: 'Outfit', sans-serif; font-size: 2.5rem; font-weight: 800; margin-bottom: 8px; }
+      .splash-subtitle { color: #a0a0c0; font-family: 'Outfit', sans-serif; letter-spacing: 0.2em; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 40px; }
+      .splash-loader { width: 200px; height: 2px; background: rgba(255,255,255,0.1); border-radius: 2px; margin: 0 auto; overflow: hidden; }
+      .splash-loader-bar { width: 40%; height: 100%; background: #7c3aed; animation: splash-load 2s infinite ease-in-out; }
+      @keyframes splash-load { 0% { transform: translateX(-100%); } 100% { transform: translateX(250%); } }
+      #three-bg { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; }
+    </style>
+  </body>
+</html>

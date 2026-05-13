@@ -1,0 +1,14 @@
+{
+  "name": "nexusai-server",
+  "version": "1.0.0",
+  "description": "NexusAI Node.js high-performance server",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "start:all": "start cmd /k \"cd ../backend && py app.py\" && node index.js"
+  },
+  "keywords": [],
+  "author": "NexusAI",
+  "license": "ISC"
+}

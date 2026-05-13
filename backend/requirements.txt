@@ -1,0 +1,14 @@
+flask
+flask-cors
+groq
+requests
+python-dotenv
+beautifulsoup4
+duckduckgo-search
+pandas
+numpy
+scikit-learn
+flask-socketio
+youtube-transcript-api
+chromadb
+pdfplumber

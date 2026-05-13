@@ -1,0 +1,34 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+env/
+__pycache__/
+*.pyc
+
+# Build outputs
+dist/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Environment variables & Sensitive data
+.env
+.env.*
+*.log
+keys/
+*.pem
+*.key
+
+# IDEs and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Scratch / Temp
+scratch/
+.tempmediaStorage/
+frontend-old/
