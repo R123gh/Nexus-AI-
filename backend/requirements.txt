@@ -9,6 +9,7 @@ pandas
 numpy
 scikit-learn
 flask-socketio
+pymongo
 gevent
 greenlet
 gunicorn
