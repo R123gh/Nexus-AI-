@@ -1,7 +1,5 @@
-import chromadb
 import os
 import time
-from chromadb.utils import embedding_functions
 from services.groq_service import chat_completion
 from config import DEFAULT_CHAT_MODEL, FAST_MODEL
 
@@ -13,19 +11,45 @@ class NexusBrain:
     """Semantic Long-Term Memory for NexusAI."""
     
     def __init__(self):
-        self.client = chromadb.PersistentClient(path=DB_PATH)
-        # Default embedding function
-        self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
-        self.collection = self.client.get_or_create_collection(
-            name="user_memory",
-            embedding_function=self.embed_fn
-        )
+        self.client = None
+        self.collection = None
+        self._initialized = False
+        self._error = None
         # Add simple cache for faster lookups
         self._cache = {}
         self._cache_ttl = 300  # 5 minutes
 
+    def _init_chroma(self):
+        """Lazy initialization of ChromaDB to prevent startup crashes."""
+        if self._initialized:
+            return True
+        if self._error:
+            return False
+            
+        try:
+            import chromadb
+            from chromadb.utils import embedding_functions
+            
+            self.client = chromadb.PersistentClient(path=DB_PATH)
+            # Default embedding function
+            self.embed_fn = embedding_functions.DefaultEmbeddingFunction()
+            self.collection = self.client.get_or_create_collection(
+                name="user_memory",
+                embedding_function=self.embed_fn
+            )
+            self._initialized = True
+            print("[Brain] ChromaDB initialized successfully.")
+            return True
+        except Exception as e:
+            self._error = str(e)
+            print(f"[Brain] Failed to initialize ChromaDB: {e}. Semantic memory will be disabled.")
+            return False
+
     def store_fact(self, user_id, content, metadata=None):
         """Store a fact or preference about the user."""
+        if not self._init_chroma():
+            return None
+            
         id = f"fact_{int(time.time() * 1000)}"
         self.collection.add(
             documents=[content],
@@ -36,6 +60,9 @@ class NexusBrain:
 
     def recall_facts(self, user_id, query, n_results=5):
         """Retrieve relevant facts for a given query."""
+        if not self._init_chroma():
+            return []
+            
         # Check cache first
         cache_key = f"{user_id}_{query}_{n_results}"
         current_time = int(time.time())

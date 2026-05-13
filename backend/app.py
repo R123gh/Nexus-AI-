@@ -8,6 +8,13 @@ by the Node.js server on port 5000.
 from gevent import monkey
 monkey.patch_all()
 import os
+import sys
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+logger.info("Starting NexusAI Backend...")
 from flask import Flask, jsonify
 from flask_cors import CORS
 from flask_socketio import SocketIO, emit, join_room
@@ -24,7 +31,7 @@ CORS(app, resources={r'/api/*': {
 }})
 
 # ─── SocketIO (Python-side, for code collaboration) ──────────
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 
 @socketio.on('join_workspace')
 def handle_join(data):
