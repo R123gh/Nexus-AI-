@@ -5,8 +5,8 @@ Voice, Images, Swarm, Orchestration, Tools.
 Fast I/O routes (chat, auth, vault, notifications) are now handled
 by the Node.js server on port 5000.
 """
-import eventlet
-eventlet.monkey_patch()
+from gevent import monkey
+monkey.patch_all()
 import os
 from flask import Flask, jsonify
 from flask_cors import CORS
@@ -104,7 +104,7 @@ if __name__ == '__main__':
     socketio.run(
         app,
         host='0.0.0.0',
-        port=5001,
+        port=int(os.environ.get('PORT', 5001)),
         debug=False,
         use_reloader=False,
     )

@@ -9,7 +9,7 @@ pandas
 numpy
 scikit-learn
 flask-socketio
-eventlet
+gevent
 gunicorn
 youtube-transcript-api
 chromadb
