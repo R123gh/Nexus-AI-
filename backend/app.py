@@ -6,6 +6,7 @@ Fast I/O routes (chat, auth, vault, notifications) are now handled
 by the Node.js server on port 5000.
 """
 from gevent import monkey
+# Patch all but keep threads manageable for library compatibility (like pymongo)
 monkey.patch_all()
 import os
 import sys
@@ -98,6 +99,13 @@ def health():
         'service': 'NexusAI Python Microservice',
         'port': 5001,
         'memory': memory.get_stats(),
+    })
+
+@app.route('/')
+def root():
+    return jsonify({
+        'message': 'NexusAI Python Microservice is running.',
+        'health_check': '/api/python/health'
     })
 
 
