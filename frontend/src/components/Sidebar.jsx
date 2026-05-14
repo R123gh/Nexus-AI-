@@ -72,7 +72,7 @@ const Sidebar = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-8 no-scrollbar">
+      <div className="flex-1 overflow-y-auto p-4 space-y-8">
         {/* Actions */}
         <button 
           onClick={onNewChat}

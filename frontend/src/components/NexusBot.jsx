@@ -146,7 +146,7 @@ const NexusBot = ({ settings, isOpen, onClose }) => {
       {/* Messages */}
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth no-scrollbar"
+        className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth"
       >
         {messages.map((msg, i) => (
           <div 

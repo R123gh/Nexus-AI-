@@ -497,7 +497,7 @@ const App = () => {
       case 'rag-chat':
         return (
           <>
-            <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-10 sm:py-10 no-scrollbar scroll-smooth" ref={chatContainerRef}>
+            <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-10 sm:py-10 scroll-smooth" ref={chatContainerRef}>
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center p-6 sm:p-16 animate-in fade-in zoom-in-95 duration-1000">
                   <div className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-500/10 text-indigo-400 rounded-full text-[10px] sm:text-xs font-black tracking-widest uppercase mb-8 border border-indigo-500/20 shadow-lg shadow-indigo-500/5">
@@ -810,7 +810,7 @@ const App = () => {
           </div>
         </header>
 
-        <div className="flex-1 relative min-h-0">
+        <div className="flex-1 relative min-h-0 flex flex-col overflow-hidden">
           {renderContent()}
         </div>
       </main>

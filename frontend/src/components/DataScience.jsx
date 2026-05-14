@@ -201,7 +201,7 @@ const DataScience = ({ user }) => {
   return (
     <div className="flex flex-col h-full bg-[var(--bg-0)] animate-in fade-in duration-500">
       {/* Tabs Header */}
-      <div className="flex px-4 md:px-8 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] overflow-x-auto no-scrollbar gap-6 md:gap-10">
+      <div className="flex px-4 md:px-8 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] overflow-x-auto gap-6 md:gap-10">
         {['upload', 'explorer', 'analysis', 'training', 'results', 'predict'].map(tab => (
           <button
             key={tab}
@@ -335,7 +335,7 @@ const DataScience = ({ user }) => {
                     <Settings size={20} className="text-[var(--accent)]" />
                     <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-2)]">Data Sanitization</h4>
                   </div>
-                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
+                  <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
                     {dataInfo.columns.map(col => (
                       <div key={col} className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div className="flex-1">

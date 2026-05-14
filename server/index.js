@@ -105,7 +105,7 @@ app.get('/api/health', (req, res) => {
 // ─── Serve Frontend (dist) ───────────────────────────────────────────────────
 const DIST = path.join(__dirname, '../frontend/dist');
 app.use(express.static(DIST));
-app.get('/*', (req, res) => {
+app.use((req, res) => {
   if (req.url.startsWith('/api')) return res.status(404).json({ error: 'Endpoint not found on Node or Python' });
   res.sendFile(path.join(DIST, 'index.html'));
 });
