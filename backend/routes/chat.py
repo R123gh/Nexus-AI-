@@ -84,7 +84,6 @@ def handle_chat():
         
         # OPTIMIZATION: Default to simple_chat for faster responses
         if is_complex and not data.get('simple_chat', True):
-            print(f"[*] Complex request detected. Invoking Strategic Planner...")
             response_text = planner.execute_advanced_goal(message, api_key, history, model)
             
             response_data = {
@@ -340,7 +339,7 @@ def handle_chat_stream():
     history = data.get('history', [])
     model = validate_model(data.get('model', ''))
     temperature = validate_temperature(data.get('temperature', 0.7))
-    session_id = data.get('session_id', 'default')
+    session_id = data.get('session_id') or 'default'
     user_id = data.get('user_id')
     system_prompt = data.get('system_prompt', '')
 
@@ -354,8 +353,7 @@ def handle_chat_stream():
             # Memory extraction is ALWAYS backgrounded to prevent blocking
             threading.Thread(target=brain.extract_and_remember, args=(user_id, message, api_key)).start()
         except Exception as e:
-            print(f"[!] Memory handling error: {e}")
-
+            pass
     memory.add_message(session_id, 'user', message, user_id)
 
     # Build messages
@@ -384,7 +382,6 @@ def handle_chat_stream():
             forced_search = data.get('web_search', False)
             simple_chat = data.get('simple_chat', True)  # Default to True for faster response
             
-            print(f"[DEBUG] Starting chat stream - simple_chat: {simple_chat}, forced_search: {forced_search}")
             
             # OPTIMIZATION: Skip memory recall by default for faster response
             # Only fetch if explicitly NOT simple_chat
@@ -402,9 +399,7 @@ def handle_chat_stream():
             if simple_chat and not forced_search:
                 intent_result = {'intent': 'chat', 'action_type': None, 'params': None}
                 intent_usage = None
-                print(f"[DEBUG] Skipping intent classification")
             else:
-                print(f"[DEBUG] Running intent classification")
                 intent_result, intent_usage = classify_intent(message, api_key, history, model, temperature)
             
             if user_id and intent_usage:
@@ -452,22 +447,17 @@ def handle_chat_stream():
             # 3. Stream the LLM response
             full_response = []
             
-            print(f"[DEBUG] Starting LLM stream with {len(messages)} messages")
             
             # If the keyword matcher generated a static response, yield it instantly
             if intent_result.get('response'):
-                print(f"[DEBUG] Using static response from intent")
                 full_response.append(intent_result['response'])
                 yield f"data: {_json.dumps({'chunk': intent_result['response']})}\n\n"
             else:
-                print(f"[DEBUG] Calling chat_completion_stream")
                 try:
                     for chunk in chat_completion_stream(messages, api_key, model, temperature):
                         full_response.append(chunk)
-                        print(f"[DEBUG] Got chunk: {chunk[:50]}...")
                         yield f"data: {_json.dumps({'chunk': chunk})}\n\n"
                 except Exception as e:
-                    print(f"[ERROR] Stream failed: {e}")
                     yield f"data: {_json.dumps({'error': str(e)})}\n\n"
                     
             # Store complete response

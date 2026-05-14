@@ -154,21 +154,43 @@ def perform_eda():
     df = data_store[session_id]
     
     try:
-        summary = df.describe(include='all').replace({np.nan: None}).to_dict()
+        # 1. Summary statistics
+        # We handle numeric and object columns separately to avoid issues with describe(include='all')
+        summary = df.describe().replace({np.nan: None}).to_dict()
+        
+        # 2. Missing values
         missing = df.isnull().sum().to_dict()
-        corr = None
+        
+        # 3. Correlation (Numeric only)
+        corr = {}
         numeric_df = df.select_dtypes(include=[np.number])
-        if not numeric_df.empty:
-            corr = numeric_df.corr().replace({np.nan: None}).to_dict()
+        if not numeric_df.empty and len(numeric_df.columns) > 1:
+            try:
+                corr = numeric_df.corr().replace({np.nan: None}).to_dict()
+            except Exception as ce:
+                print(f"Correlation calculation error: {ce}")
+        
+        # 4. Data types
+        dtypes = df.dtypes.astype(str).to_dict()
+        
+        # 5. Row preview (Head)
+        # We ensure all columns are present in rows_head
+        rows_head = df.head(100).replace({np.nan: None}).to_dict(orient='records')
             
         return jsonify({
             'summary': summary,
             'missing': missing,
             'correlation': corr,
-            'dtypes': df.dtypes.astype(str).to_dict(),
-            'rows_head': df.head(100).replace({np.nan: None}).to_dict(orient='records') # For Live Explorer
+            'dtypes': dtypes,
+            'columns': list(df.columns),
+            'rows_head': rows_head,
+            'numeric_cols': list(numeric_df.columns),
+            'categorical_cols': list(df.select_dtypes(exclude=[np.number]).columns)
         })
     except Exception as e:
+        import traceback
+        print(f"EDA Error: {e}")
+        traceback.print_exc()
         return jsonify({'error': str(e)}), 500
 
 @ds_bp.route('/train', methods=['POST'])
@@ -497,19 +519,42 @@ def clean_data():
     df = data_store[session_id]
     try:
         if action == 'drop_col':
-            df = df.drop(columns=[column])
+            if column in df.columns:
+                df = df.drop(columns=[column])
+            else:
+                return jsonify({'error': f"Column '{column}' not found."}), 400
         elif action == 'fill_na':
             strategy = data.get('strategy', 'mean')
+            if column not in df.columns:
+                return jsonify({'error': f"Column '{column}' not found."}), 400
+                
             if strategy == 'mean':
-                df[column] = df[column].fillna(df[column].mean())
+                if pd.api.types.is_numeric_dtype(df[column]):
+                    df[column] = df[column].fillna(df[column].mean())
+                else:
+                    return jsonify({'error': "Mean strategy only works for numeric columns."}), 400
             elif strategy == 'median':
-                df[column] = df[column].fillna(df[column].median())
+                if pd.api.types.is_numeric_dtype(df[column]):
+                    df[column] = df[column].fillna(df[column].median())
+                else:
+                    return jsonify({'error': "Median strategy only works for numeric columns."}), 400
             elif strategy == 'mode':
-                df[column] = df[column].fillna(df[column].mode()[0])
+                mode_val = df[column].mode()
+                if not mode_val.empty:
+                    df[column] = df[column].fillna(mode_val[0])
+                else:
+                    # If all values are NaN, there's no mode
+                    pass
         
         data_store[session_id] = df
+        
+        # Persist the change to disk as well
+        file_path = os.path.join(UPLOAD_FOLDER, f"data_{session_id}.csv")
+        df.to_csv(file_path, index=False)
+        
         return jsonify({'success': True, 'columns': list(df.columns)})
     except Exception as e:
+        print(f"Cleaning Error: {e}")
         return jsonify({'error': str(e)}), 500
 
 

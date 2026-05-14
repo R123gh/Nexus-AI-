@@ -54,37 +54,36 @@ const AuthScreen = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center bg-[#050508] overflow-hidden selection:bg-indigo-500/30">
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[var(--bg-0)] overflow-hidden selection:bg-indigo-500/30">
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div 
-          className="absolute w-[800px] h-[800px] bg-indigo-600/10 blur-[150px] rounded-full transition-all duration-1000"
+          className="absolute w-[800px] h-[800px] bg-[var(--accent)]/5 blur-[150px] rounded-full transition-all duration-1000"
           style={{ 
             top: mousePos.y * 0.5 - 400, 
             left: mousePos.x * 0.5 - 400 
           }}
         />
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] brightness-200" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,transparent_0%,rgba(5,5,8,1)_100%)]" />
       </div>
 
       {/* Main Card */}
       <div className="relative z-10 w-full max-w-[480px] px-4 py-8 sm:px-6 sm:py-12 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-        <div className="bg-white/[0.01] backdrop-blur-3xl border border-white/10 rounded-[2rem] sm:rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-[0_32px_128px_rgba(0,0,0,0.8)] relative overflow-hidden group">
+        <div className="bg-[var(--bg-1)] backdrop-blur-3xl border border-[var(--border-subtle)] rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-[var(--shadow-xl)] relative overflow-hidden group">
           
           {/* Subtle Inner Glow */}
-          <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/20 blur-[60px] rounded-full group-hover:scale-150 transition-transform duration-700" />
+          <div className="absolute -top-24 -right-24 w-48 h-48 bg-[var(--accent)]/10 blur-[60px] rounded-full group-hover:scale-150 transition-transform duration-700" />
           
           {/* Brand Section */}
           <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-600 rounded-3xl mb-8 shadow-2xl shadow-indigo-500/40 relative">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-[var(--accent-gradient)] rounded-3xl mb-8 shadow-2xl shadow-indigo-500/40 relative">
               <Zap size={36} className="text-white fill-white animate-pulse" />
               <div className="absolute -inset-1 bg-white/20 rounded-3xl blur-sm -z-10" />
             </div>
-            <h1 className="text-4xl font-black text-white mb-3 tracking-tighter leading-none">
-              Nexus<span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">AI</span>
+            <h1 className="text-4xl font-black text-[var(--text-0)] mb-3 tracking-tighter leading-none">
+              Nexus<span className="text-transparent bg-clip-text bg-[var(--accent-gradient)]">AI</span>
             </h1>
-            <p className="text-slate-400 text-sm font-bold uppercase tracking-[0.2em]">
+            <p className="text-[var(--text-2)] text-sm font-bold uppercase tracking-[0.2em]">
               {isLogin ? 'Neural Gateway' : 'Identity Synthesis'}
             </p>
           </div>
@@ -93,7 +92,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-4">
               <div className="group relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-2)] group-focus-within:text-[var(--accent)] transition-colors">
                   <User size={20} />
                 </div>
                 <input 
@@ -102,12 +101,12 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-base sm:text-sm"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-4 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm"
                 />
               </div>
 
               <div className="group relative">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-2)] group-focus-within:text-[var(--accent)] transition-colors">
                   <Lock size={20} />
                 </div>
                 <input 
@@ -116,12 +115,12 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete={isLogin ? "current-password" : "new-password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-base sm:text-sm"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-12 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm"
                 />
                 <button 
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-indigo-400 transition-colors"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--text-2)] hover:text-[var(--accent)] transition-colors"
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -137,7 +136,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full h-14 bg-[var(--text-0)] text-[var(--bg-0)] rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-black/20 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full h-14 bg-[var(--accent)] text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
             >
               {loading ? (
                 <Loader2 size={24} className="animate-spin" />
@@ -151,21 +150,21 @@ const AuthScreen = ({ onLoginSuccess }) => {
           </form>
 
           {/* Toggle */}
-          <div className="mt-10 pt-8 border-t border-white/5 text-center">
+          <div className="mt-10 pt-8 border-t border-[var(--border-subtle)] text-center">
             <button 
               onClick={() => { setIsLogin(!isLogin); setError(''); }}
-              className="text-slate-400 text-xs font-bold uppercase tracking-widest hover:text-white transition-all group"
+              className="text-[var(--text-2)] text-xs font-bold uppercase tracking-widest hover:text-[var(--text-0)] transition-all group"
             >
               {isLogin ? "New to the network? " : "Existing operator? "}
-              <span className="text-indigo-400 group-hover:text-indigo-300 transition-colors">
+              <span className="text-[var(--accent)] group-hover:brightness-110 transition-all font-black">
                 {isLogin ? 'Register Hub' : 'Enter Gateway'}
               </span>
             </button>
           </div>
 
           {/* Trust */}
-          <div className="mt-8 flex items-center justify-center gap-2 text-slate-600 text-[10px] font-black uppercase tracking-[0.2em]">
-            <ShieldCheck size={14} className="text-emerald-500/50" />
+          <div className="mt-8 flex items-center justify-center gap-2 text-[var(--text-2)] text-[10px] font-black uppercase tracking-[0.2em] opacity-50">
+            <ShieldCheck size={14} className="text-emerald-500" />
             Quantum Secured Link
           </div>
         </div>

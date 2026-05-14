@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "description": "NexusAI Full Stack Orchestration",
   "scripts": {
-    "install:all": "npm install && cd frontend && npm install && cd ../server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt",
+    "install:all": "npm install && cd frontend && npm install && cd ../server && npm install && cd ../backend && py -m pip install --break-system-packages -r requirements.txt",
     "build:frontend": "cd frontend && npm run build",
     "start:server": "cd server && npm start",
-    "start:python": "cd backend && python -m gunicorn --worker-class gevent -w 1 app:app",
+    "start:python": "cd backend && py app.py",
     "start": "concurrently \"npm run start:server\" \"npm run start:python\"",
     "deploy:prepare": "npm install && cd frontend && npm install && npm run build && cd ../server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt"
   },

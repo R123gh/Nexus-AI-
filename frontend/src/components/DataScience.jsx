@@ -150,13 +150,23 @@ const DataScience = ({ user }) => {
     setLoading(true);
     try {
       const data = await apiDSClean(session, action, column, strategy);
+      if (data.error) throw new Error(data.error);
+      
       if (data.success) {
         const edaInfo = await apiDSEda(session);
+        if (edaInfo.error) throw new Error(edaInfo.error);
+        
         setDataInfo(edaInfo);
         createNotification(user?.id, 'Data Cleaned', `Transformation applied to ${column}`, 'success');
+        
+        // If we dropped the target, reset it
+        if (action === 'drop_col' && column === trainingConfig.target) {
+          setTrainingConfig(prev => ({ ...prev, target: edaInfo.columns[0] || '' }));
+        }
       }
     } catch (err) {
       console.error(err);
+      createNotification(user?.id, 'Cleaning Failed', err.message, 'error');
     } finally {
       setLoading(false);
     }
@@ -299,33 +309,44 @@ const DataScience = ({ user }) => {
                     <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-2)]">Feature Correlation</h4>
                   </div>
                   <div className="overflow-x-auto">
-                    <div className="min-w-[400px]">
-                      <div className="grid grid-cols-[100px_repeat(auto-fit,minmax(0,1fr))] gap-1">
-                        <div />
-                        {dataInfo.columns.filter(c => ((dataInfo.dtypes || {})[c] || '').includes('int') || ((dataInfo.dtypes || {})[c] || '').includes('float')).map(col => (
-                          <div key={`h-${col}`} className="text-[8px] font-black text-[var(--text-2)] rotate-[-45deg] origin-left truncate h-12">
-                            {col}
-                          </div>
-                        ))}
-                        {dataInfo.columns.filter(c => ((dataInfo.dtypes || {})[c] || '').includes('int') || ((dataInfo.dtypes || {})[c] || '').includes('float')).map(col1 => (
-                          <React.Fragment key={`r-${col1}`}>
-                            <div className="text-[8px] font-black text-[var(--text-2)] text-right pr-2 self-center truncate">{col1}</div>
-                            {dataInfo.columns.filter(c => ((dataInfo.dtypes || {})[c] || '').includes('int') || ((dataInfo.dtypes || {})[c] || '').includes('float')).map(col2 => {
-                              const val = ((dataInfo.correlation || {})[col1] || {})[col2] || 0;
-                              const opacity = Math.abs(val);
-                              return (
-                                <div 
-                                  key={`${col1}-${col2}`} 
-                                  className="aspect-square rounded-sm cursor-help hover:scale-125 transition-transform"
-                                  style={{ background: val > 0 ? `rgba(124, 58, 237, ${opacity})` : `rgba(239, 68, 68, ${opacity})` }}
-                                  title={`${col1} vs ${col2}: ${val.toFixed(2)}`}
-                                />
-                              );
-                            })}
-                          </React.Fragment>
-                        ))}
+                    {dataInfo.error ? (
+                      <div className="flex flex-col items-center justify-center p-12 text-center space-y-4">
+                        <AlertCircle size={48} className="text-rose-500" />
+                        <div className="text-sm font-bold text-rose-500">{dataInfo.error}</div>
+                        <p className="text-xs text-[var(--text-2)] max-w-xs">An error occurred during neural analysis. Please try re-uploading the dataset.</p>
                       </div>
-                    </div>
+                    ) : (
+                      <div className="min-w-[400px]">
+                        <div className="grid grid-cols-[100px_repeat(auto-fit,minmax(0,1fr))] gap-1">
+                          <div />
+                          {(dataInfo.numeric_cols || []).map(col => (
+                            <div key={`h-${col}`} className="text-[8px] font-black text-[var(--text-2)] rotate-[-45deg] origin-left truncate h-12">
+                              {col}
+                            </div>
+                          ))}
+                          {(dataInfo.numeric_cols || []).map(col1 => (
+                            <React.Fragment key={`r-${col1}`}>
+                              <div className="text-[8px] font-black text-[var(--text-2)] text-right pr-2 self-center truncate">{col1}</div>
+                              {(dataInfo.numeric_cols || []).map(col2 => {
+                                const val = ((dataInfo.correlation || {})[col1] || {})[col2] || 0;
+                                const opacity = Math.abs(val);
+                                return (
+                                  <div 
+                                    key={`${col1}-${col2}`} 
+                                    className="aspect-square rounded-sm cursor-help hover:scale-125 transition-transform"
+                                    style={{ background: val > 0 ? `rgba(124, 58, 237, ${opacity})` : `rgba(239, 68, 68, ${opacity})` }}
+                                    title={`${col1} vs ${col2}: ${val.toFixed(2)}`}
+                                  />
+                                );
+                              })}
+                            </React.Fragment>
+                          ))}
+                        </div>
+                        {(dataInfo.numeric_cols || []).length === 0 && (
+                          <div className="text-center py-10 text-[var(--text-3)] text-[10px] font-black uppercase tracking-widest">No Numeric Features Detected</div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -336,20 +357,54 @@ const DataScience = ({ user }) => {
                     <h4 className="text-xs font-black uppercase tracking-[0.2em] text-[var(--text-2)]">Data Sanitization</h4>
                   </div>
                   <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
-                    {dataInfo.columns.map(col => (
-                      <div key={col} className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div className="flex-1">
-                          <div className="font-black text-[var(--text-0)] text-sm mb-1">{col}</div>
-                          <div className="text-[10px] font-bold text-[var(--text-2)] uppercase">{(dataInfo.missing || {})[col] || 0} NULL VALUES</div>
+                    {(dataInfo.columns || []).map(col => {
+                      const isNumeric = ((dataInfo.dtypes || {})[col] || '').includes('int') || ((dataInfo.dtypes || {})[col] || '').includes('float');
+                      const missingCount = (dataInfo.missing || {})[col] || 0;
+                      
+                      return (
+                        <div key={col} className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                          <div className="flex-1">
+                            <div className="font-black text-[var(--text-0)] text-sm mb-1">{col}</div>
+                            <div className="text-[10px] font-bold text-[var(--text-2)] uppercase">{missingCount} NULL VALUES</div>
+                          </div>
+                          <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                            <button 
+                              onClick={() => handleClean('drop_col', col)} 
+                              className="px-3 py-1.5 text-[10px] font-black bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg hover:bg-rose-500 hover:text-white transition-all"
+                            >
+                              DROP
+                            </button>
+                            {missingCount > 0 && (
+                              <>
+                                {isNumeric ? (
+                                  <>
+                                    <button 
+                                      onClick={() => handleClean('fill_na', col, 'mean')} 
+                                      className="px-3 py-1.5 text-[10px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg hover:bg-emerald-500 hover:text-white transition-all"
+                                    >
+                                      MEAN
+                                    </button>
+                                    <button 
+                                      onClick={() => handleClean('fill_na', col, 'median')} 
+                                      className="px-3 py-1.5 text-[10px] font-black bg-blue-500/10 text-blue-500 border border-blue-500/20 rounded-lg hover:bg-blue-500 hover:text-white transition-all"
+                                    >
+                                      MEDIAN
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button 
+                                    onClick={() => handleClean('fill_na', col, 'mode')} 
+                                    className="px-3 py-1.5 text-[10px] font-black bg-amber-500/10 text-amber-500 border border-amber-500/20 rounded-lg hover:bg-amber-500 hover:text-white transition-all"
+                                  >
+                                    MODE
+                                  </button>
+                                )}
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex gap-2 w-full sm:w-auto">
-                          <button onClick={() => handleClean('drop_col', col)} className="flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black bg-rose-500/10 text-rose-500 border border-rose-500/20 rounded-lg hover:bg-rose-500 hover:text-white transition-all">DROP</button>
-                          {(dataInfo.missing || {})[col] > 0 && (
-                            <button onClick={() => handleClean('fill_na', col, 'mean')} className="flex-1 sm:flex-none px-3 py-1.5 text-[10px] font-black bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 rounded-lg hover:bg-emerald-500 hover:text-white transition-all">FILL MEAN</button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               </div>

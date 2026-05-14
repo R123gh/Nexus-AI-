@@ -28,6 +28,7 @@ import SwarmMode from './components/SwarmMode';
 import VaultMode from './components/VaultMode';
 import RagChat from './components/RagChat';
 import { createNotification } from './utils/notifications';
+import CodeBot from './components/CodeBot';
 import { MessageSquareText } from 'lucide-react';
 
 
@@ -82,6 +83,13 @@ const App = () => {
     setSidebarOpen(false);
   };
 
+  const handleSetMode = (mode) => {
+    if (mode !== 'rag-chat' && mode !== 'rag') {
+      setSelectedKB(null);
+    }
+    setActiveMode(mode);
+  };
+
   const handleLogout = () => {
     localStorage.removeItem('nexusai_user');
     localStorage.removeItem('nexusai_settings');
@@ -96,6 +104,8 @@ const App = () => {
       const history = await apiGetSessionHistory(conversationId, settings);
       setMessages(history);
       setSessionId(conversationId);
+      // Conversations loaded from history always use general chat mode
+      setSelectedKB(null);
       setActiveMode('chat');
       setSidebarOpen(false);
     } catch (err) {
@@ -492,7 +502,6 @@ const App = () => {
     switch (activeMode) {
       case 'chat':
       case 'autonomous-planner':
-      case 'rag-chat':
         return (
           <>
             <div className="flex-1 overflow-y-auto px-4 py-6 sm:px-10 sm:py-10 scroll-smooth" ref={chatContainerRef}>
@@ -540,20 +549,22 @@ const App = () => {
 
             <div className="input-area px-4 py-4 sm:px-10 sm:py-8 border-t border-[var(--border-subtle)] bg-[var(--bg-glass)] backdrop-blur-3xl z-40">
               <div className="max-w-4xl mx-auto w-full">
-                <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-                  <select 
-                    value={settings.model} 
-                    onChange={e => {
-                      const newSettings = { ...settings, model: e.target.value };
-                      setSettings(newSettings);
-                      localStorage.setItem('nexusai_settings', JSON.stringify(newSettings));
-                    }}
-                    className="bg-white/5 border border-white/10 text-slate-300 text-[11px] px-3 py-2 rounded-xl outline-none focus:border-indigo-500/40 transition-all font-black uppercase tracking-widest"
-                  >
-                    {MODELS.map(m => <option key={m.id} value={m.id} className="bg-slate-900">{m.name}</option>)}
-                  </select>
-                  <div className="flex items-center gap-6">
-                    <label className="flex items-center gap-2.5 text-[11px] text-slate-400 cursor-pointer hover:text-indigo-400 transition-colors font-black uppercase tracking-widest group">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 px-2 sm:px-0">
+                  <div className="w-full sm:w-auto">
+                    <select 
+                      value={settings.model} 
+                      onChange={e => {
+                        const newSettings = { ...settings, model: e.target.value };
+                        setSettings(newSettings);
+                        localStorage.setItem('nexusai_settings', JSON.stringify(newSettings));
+                      }}
+                      className="w-full sm:w-auto bg-white/5 border border-white/10 text-slate-300 text-[10px] sm:text-[11px] px-3 py-2.5 rounded-xl outline-none focus:border-indigo-500/40 transition-all font-black uppercase tracking-widest"
+                    >
+                      {MODELS.map(m => <option key={m.id} value={m.id} className="bg-slate-900">{m.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex items-center justify-center gap-6">
+                    <label className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-slate-400 cursor-pointer hover:text-indigo-400 transition-colors font-black uppercase tracking-widest group">
                       <input 
                         type="checkbox" 
                         checked={!settings.simple_chat} 
@@ -562,43 +573,54 @@ const App = () => {
                           setSettings(newSettings);
                           localStorage.setItem('nexusai_settings', JSON.stringify(newSettings));
                         }}
-                        className="w-4 h-4 rounded border-white/20 bg-transparent text-indigo-500 focus:ring-indigo-500/20 transition-all cursor-pointer"
+                        className="w-3.5 h-3.5 rounded border-white/20 bg-transparent text-indigo-500 focus:ring-indigo-500/20 transition-all cursor-pointer"
                       />
                       <span>Agent Mode</span>
                     </label>
                   </div>
                 </div>
-
-                <div className={`flex items-center gap-3 p-2 bg-[var(--bg-hover)] border rounded-2xl sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
+                <div className={`flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-[var(--bg-hover)] border rounded-[1.5rem] sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
                   isDragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-[var(--border-default)] focus-within:border-indigo-500/40'
                 }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
+                  {/* Mobile Action Group (Left) */}
+                  <div className="flex sm:hidden items-center gap-1 ml-1">
+                    <button className="p-2 rounded-xl text-slate-400 active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                      <Paperclip size={18} />
+                    </button>
+                    <button className={`p-2 rounded-xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'text-slate-400'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                      <Mic size={18} />
+                    </button>
+                  </div>
+
+                  {/* Desktop Attachment (Left) */}
                   <button className="hidden sm:flex p-3 rounded-2xl bg-white/5 text-slate-400 hover:text-indigo-400 transition-all active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
                     <Paperclip size={20} />
                   </button>
+
                   <input 
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     placeholder={selectedKB ? `Query ${selectedKB.name}...` : "Neural Link Active..."}
-                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-base sm:text-sm font-bold placeholder:text-slate-600 outline-none px-3 py-3"
+                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-sm sm:text-sm font-bold placeholder:text-slate-600 outline-none px-2 py-2"
                     disabled={isLoading}
                   />
-                  <div className="flex items-center gap-2 pr-1">
-                    <button className="sm:hidden p-2.5 rounded-xl bg-white/5 text-slate-400 active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-                      <Paperclip size={18} />
+
+                  <div className="flex items-center gap-1 sm:gap-2 pr-1">
+                    {/* Desktop Voice (Right) */}
+                    <button className={`hidden sm:flex p-3 rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                      <Mic size={20} className={isRecordingVoice ? 'animate-bounce' : ''} />
                     </button>
-                    <button className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`} onClick={startVoiceDictation} disabled={isLoading}>
-                      <Mic size={18} className={isRecordingVoice ? 'animate-bounce' : ''} />
-                    </button>
+                    
                     <button 
                       onClick={() => handleSend()}
-                      className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading ? 'opacity-50' : ''}`}
-                      disabled={isLoading}
+                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading || !input.trim() ? 'opacity-50 grayscale' : ''}`}
+                      disabled={isLoading || !input.trim()}
                     >
                       {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                     </button>
@@ -675,6 +697,13 @@ const App = () => {
           </div>
         );
 
+      case 'code-bot':
+        return (
+          <div className="code-bot-wrapper h-full">
+            <CodeBot settings={settings} user={user} />
+          </div>
+        );
+
       case 'rag-chat':
         return (
           <div className="rag-chat-wrapper" style={{ height: '100%' }}>
@@ -726,17 +755,17 @@ const App = () => {
     <div className="flex h-screen bg-[var(--bg-0)] text-[var(--text-0)] overflow-hidden font-sans selection:bg-indigo-500/30" data-theme={settings.theme}>
       <Background3D />
       
-      {/* Sidebar Overlay for Mobile */}
+      {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[998] md:hidden animate-in fade-in duration-300" 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[999] md:hidden animate-in fade-in duration-300" 
           onClick={() => setSidebarOpen(false)} 
         />
       )}
 
       <Sidebar 
         activeMode={activeMode} 
-        setActiveMode={setActiveMode}
+        setActiveMode={handleSetMode}
         setShowSettings={setShowSettings}
         conversations={conversations}
         onNewChat={handleNewChat}
@@ -759,51 +788,51 @@ const App = () => {
       )}
 
       <main className="main-content flex-1 relative overflow-hidden flex flex-col min-w-0">
-        <header className="top-bar border-b border-white/5 bg-slate-900/40 backdrop-blur-3xl z-50 px-4 py-3 sm:px-10 sm:py-5 flex-shrink-0">
-          <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto w-full">
+        <header className="h-16 sm:h-20 border-b border-[var(--border-subtle)] bg-[var(--bg-1)] backdrop-blur-3xl z-50 px-4 sm:px-10 flex items-center shrink-0">
+          <div className="flex items-center justify-between gap-4 w-full">
             <div className="flex items-center gap-3 sm:gap-4">
               <button 
-                className="p-2.5 rounded-xl bg-white/5 text-slate-300 md:hidden hover:text-indigo-400 transition-all active:scale-90" 
-                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2.5 rounded-xl bg-[var(--bg-input)] text-[var(--text-1)] md:hidden hover:text-[var(--accent)] transition-all active:scale-90" 
+                onClick={() => setSidebarOpen(true)}
               >
                 <Menu size={20} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-xs sm:text-base md:text-lg font-black tracking-tighter leading-none text-white whitespace-nowrap">
-                  Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{user?.username || 'Nexus Agent'}</span>
+                <h2 className="text-sm sm:text-lg font-black tracking-tighter leading-none text-[var(--text-0)] whitespace-nowrap">
+                  Hello, <span className="text-[var(--accent)]">{user?.username || 'Nexus Agent'}</span>
                 </h2>
-                <span className="hidden sm:block text-[8px] md:text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1.5">
+                <span className="hidden sm:block text-[9px] font-black uppercase tracking-[0.3em] text-[var(--text-2)] mt-1.5">
                   Quantum Core Synchronized
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <div className="hidden lg:flex items-center bg-white/[0.03] border border-white/5 rounded-2xl px-4 py-2 focus-within:border-indigo-500/40 transition-all">
-                <Search size={14} className="text-slate-500 mr-3" />
+            <div className="flex items-center gap-1.5 sm:gap-4">
+              <div className="hidden lg:flex items-center bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl px-4 py-2 focus-within:border-[var(--accent)] transition-all group">
+                <Search size={14} className="text-[var(--text-2)] mr-3 group-focus-within:text-[var(--accent)]" />
                 <input 
                   id="chat-search"
                   type="text" 
                   placeholder="Memory Search..." 
                   value={searchQuery}
                   onChange={e => handleSearch(e.target.value)}
-                  className="bg-transparent text-slate-300 text-xs outline-none w-32 focus:w-48 transition-all font-bold placeholder:text-slate-700"
+                  className="bg-transparent text-[var(--text-1)] text-xs outline-none w-32 focus:w-48 transition-all font-bold placeholder:text-[var(--text-2)]"
                 />
               </div>
               
-              <div className="flex items-center gap-1 sm:gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-2">
                 <button 
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`p-2 rounded-lg sm:p-2.5 sm:rounded-xl transition-all active:scale-90 ${isMuted ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`}
+                  className={`p-2.5 rounded-xl transition-all active:scale-90 ${isMuted ? 'bg-rose-500/20 text-rose-500' : 'bg-[var(--bg-input)] text-[var(--text-2)] hover:text-[var(--accent)]'}`}
                   title={isMuted ? "Unmute" : "Mute"}
                 >
-                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                 </button>
                 <button 
                   onClick={() => setShowSettings(true)}
-                  className="p-2 rounded-lg sm:p-2.5 sm:rounded-xl bg-white/5 text-slate-400 hover:text-indigo-400 transition-all active:scale-90"
+                  className="p-2.5 rounded-xl bg-[var(--bg-input)] text-[var(--text-2)] hover:text-[var(--accent)] transition-all active:scale-90"
                 >
-                  <Settings size={16} />
+                  <Settings size={18} />
                 </button>
               </div>
             </div>

@@ -86,6 +86,7 @@ def list_chunks(kb_id):
 @rag_bp.route('/<kb_id>/chat', methods=['POST'])
 def chat_kb(kb_id):
     data = request.json or {}
+    session_id = data.get('session_id') or 'default'
     message = data.get('message', '').strip()
     history = data.get('history', [])
     model = data.get('model', 'llama-3.3-70b-versatile')
@@ -99,18 +100,23 @@ def chat_kb(kb_id):
     if not api_key:
         return jsonify({'error': 'Groq API key not configured'}), 401
         
-    # Retrieve local chunks with scores - lowered threshold for better recall
-    chunks = retrieve_chunks(kb_id, message, top_k=10, threshold=0.001)
+    # ================================================================
+    # RAG WORKFLOW (Step-by-Step Implementation)
+    # ================================================================
 
-    print(f"RAG Debug: Query='{message}' | Found {len(chunks)} chunks for KB {kb_id}")
-    
+    # STEP 1: User asks a question (Received as 'message' parameter)
+    # STEP 2 & 3: Convert question to embeddings and Retrieve relevant documents
+    # (ChromaDB handles embedding the query and searching the vector space)
+    chunks = retrieve_chunks(kb_id, message, top_k=top_k)
+
+    # STEP 4: Add retrieved context to the prompt (Augmentation)
     context_sections = []
     for c in chunks:
-        context_sections.append(f"--- SOURCE: {c['source']} (Relevance: {c['score']:.2f}) ---\n{c['text']}")
+        context_sections.append(f"--- SOURCE: {c['source']} ---\n{c['text']}")
     
     context_text = "\n\n".join(context_sections)
-    
-    # Optional Web Augmentation
+
+    # Optional Web Augmentation (Hybrid RAG)
     web_context = ""
     if augment_web:
         from services.orchestrator import web_search
@@ -122,31 +128,30 @@ def chat_kb(kb_id):
         except:
             web_context = f"[Web Search Error]: Could not retrieve live data"
 
+    # Constructing the Grounded Prompt (Step 4 continued)
     sys_prompt = (
-        "ROLE: You are the NexusAI Contextual Intelligence Engine. Your primary mission is to answer questions using ONLY the provided LOCAL KNOWLEDGE BASE CONTEXT below.\n\n"
-        "STRICT GUIDELINES:\n"
-        "1. If the answer is contained in the context, synthesize a detailed response and CITE the source filename immediately after the relevant sentence.\n"
-        "2. If the context does not contain enough information, but WEB SEARCH is enabled and provided, use that as a secondary source.\n"
-        "3. If NEITHER the context nor the web search provides the answer, state: 'I am sorry, but that information is not available in your knowledge base.' NEVER invent facts.\n"
-        "4. If context is provided, DO NOT mention 'Based on the context provided' - just answer directly and cite the source.\n\n"
-
-        f"--- LOCAL KNOWLEDGE BASE CONTEXT ---\n{context_text if context_text else 'NO RELEVANT LOCAL CONTEXT FOUND.'}\n\n"
-        f"--- LIVE WEB SEARCH CONTEXT ---\n{web_context if web_context else 'WEB SEARCH DISABLED OR NO RESULTS.'}\n\n"
-        "Answer the user query based on the above intelligence."
+        "ROLE: You are the NexusAI Contextual Intelligence Engine. Your mission is to provide accurate, grounded answers.\n\n"
+        "INSTRUCTIONS:\n"
+        "1. Use the LOCAL KNOWLEDGE BASE CONTEXT below as your primary source of truth.\n"
+        "2. If the answer is present, synthesize it and CITE the source filename.\n"
+        "3. If the context is insufficient, state that the information is not in the knowledge base.\n\n"
+        f"--- LOCAL KNOWLEDGE BASE CONTEXT (Retrieved Documents) ---\n{context_text if context_text else 'NO RELEVANT LOCAL CONTEXT FOUND.'}\n\n"
+        f"--- LIVE WEB SEARCH CONTEXT ---\n{web_context if web_context else 'WEB SEARCH DISABLED.'}\n\n"
+        "--- FINAL TASK ---\n"
+        "Answer the user query based ONLY on the provided context. Be professional and accurate."
     )
     
     messages = [
         {'role': 'system', 'content': sys_prompt},
     ]
 
-    for msg in history[-3:]: # Reduced history for more focus
+    # Add limited history for context-aware follow-ups
+    for msg in history[-3:]:
         messages.append({'role': msg['role'], 'content': msg['content']})
-    
-    # Inject Context again right before the question to force focus
-    if context_text:
-        messages.append({'role': 'system', 'content': f"REMINDER: Only use this context for the next answer:\n{context_text}"})
         
     messages.append({'role': 'user', 'content': message})
+
+    # STEP 5: Generate final answer (Generation)
 
     
     try:

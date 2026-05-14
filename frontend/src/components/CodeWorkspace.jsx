@@ -2,12 +2,14 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   FileCode, Play, Save, Folder, ChevronRight, Terminal, Plus, Trash2, 
   Download, Settings, Cpu, Package, Activity, User, MoreVertical, Loader2,
-  X, Code, Clock, Users, Search, Copy, Check, ArrowRight
+  X, Code, Clock, Users, Search, Copy, Check, ArrowRight, ChevronLeft, Layout,
+  Sparkles, ShieldCheck, History, BookOpen
 } from 'lucide-react';
 import { 
   apiGetFiles, apiGetFileContent, apiSaveFile, apiRunCode, 
   apiGetPackages, apiInstallPackage, apiChatStream
 } from '../utils/api';
+import { marked } from 'marked';
 
 const SNIPPETS = [
   { name: 'Bubble Sort (Python)', code: 'def bubble_sort(arr):\n    n = len(arr)\n    for i in range(n):\n        for j in range(0, n-i-1):\n            if arr[j] > arr[j+1]:\n                arr[j], arr[j+1] = arr[j+1], arr[j]\n    return arr\n' },
@@ -26,7 +28,9 @@ const CodeWorkspace = ({ user, settings }) => {
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [packages, setPackages] = useState([]);
-  const [sidebarTab, setSidebarTab] = useState('explorer'); // 'explorer' or 'packages'
+  const [sidebarTab, setSidebarTab] = useState('explorer'); 
+  const [showExplorer, setShowExplorer] = useState(window.innerWidth > 1024);
+  const [showTerminal, setShowTerminal] = useState(true);
   
   const [showSnippets, setShowSnippets] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -46,8 +50,8 @@ const CodeWorkspace = ({ user, settings }) => {
   const [autoApply, setAutoApply] = useState(false);
   const [architectMode, setArchitectMode] = useState(true);
 
-
   const aiChatEndRef = useRef(null);
+  const editorRef = useRef(null);
 
   useEffect(() => {
     if (aiChatEndRef.current) {
@@ -76,6 +80,13 @@ const CodeWorkspace = ({ user, settings }) => {
   useEffect(() => {
     fetchFiles();
     fetchPackages();
+    
+    const handleResize = () => {
+      if (window.innerWidth < 1024) setShowExplorer(false);
+      else setShowExplorer(true);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   const openFile = async (path, defaultName = null) => {
@@ -84,6 +95,8 @@ const CodeWorkspace = ({ user, settings }) => {
       setOpenFiles(prev => [...prev, { path, name }]);
     }
     setActiveFile(path);
+    if (window.innerWidth < 1024) setShowExplorer(false);
+    
     if (fileContents[path] === undefined) {
       try {
         const res = await apiGetFileContent(path);
@@ -123,18 +136,17 @@ const CodeWorkspace = ({ user, settings }) => {
   const handleRun = async () => {
     if (!activeFile) return;
     setLoading(true);
-    setOutput(`Running ${activeFile.split('/').pop()}...\n`);
+    setShowTerminal(true);
+    setOutput(`[SYSTEM] Initializing execution for ${activeFile.split('/').pop()}...\n`);
     try {
-      await apiSaveFile(activeFile, fileContents[activeFile]); // Auto save before run
+      await apiSaveFile(activeFile, fileContents[activeFile]); 
       const res = await apiRunCode(activeFile);
       setOutput(res.output || res.error || 'Execution finished with no output.');
     } catch (err) {
-      setOutput(`System Error: ${err.message}`);
-      // Show AI fix button automatically on error
+      setOutput(`[FATAL ERROR]: ${err.message}`);
       setAiInput(`I just ran ${activeFile.split('/').pop()} and got this error:\n\n${err.message}\n\nCan you analyze and fix this?`);
       setShowAi(true);
     } finally {
-
       setLoading(false);
     }
   };
@@ -153,12 +165,6 @@ const CodeWorkspace = ({ user, settings }) => {
     }
   };
 
-  const insertSnippet = (code) => {
-    if (!activeFile) return;
-    handleContentChange((fileContents[activeFile] || '') + '\n' + code);
-    setShowSnippets(false);
-  };
-
   const insertToEditor = (code, replace = false) => {
     if (!activeFile) return;
     if (replace) {
@@ -169,7 +175,6 @@ const CodeWorkspace = ({ user, settings }) => {
     handleContentChange(current + (current ? '\n' : '') + code);
   };
 
-
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
   };
@@ -177,85 +182,27 @@ const CodeWorkspace = ({ user, settings }) => {
   const MessageContent = ({ content }) => {
     const parts = content.split(/```/);
     return (
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%' }}>
+      <div className="flex flex-col gap-2 w-full">
         {parts.map((part, i) => {
-          if (i % 2 === 1) { // Code block
+          if (i % 2 === 1) { 
             const lines = part.split('\n');
             const lang = lines[0].trim();
             const code = lines.slice(1).join('\n').trim();
             return (
-              <div key={i} style={{ 
-                background: '#0f172a', 
-                borderRadius: '12px', 
-                border: '1px solid rgba(99, 102, 241, 0.3)', 
-                overflow: 'hidden',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.2)',
-                width: '100%'
-              }}>
-                <div style={{ 
-                  padding: '10px 14px', 
-                  background: 'rgba(255,255,255,0.03)', 
-                  display: 'flex', 
-                  justifyContent: 'space-between', 
-                  alignItems: 'center',
-                  borderBottom: '1px solid rgba(255,255,255,0.05)',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  <span style={{ fontSize: '0.6rem', color: 'var(--accent)', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {lang || 'code'}
-                  </span>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      onClick={() => copyToClipboard(code)} 
-                      style={{ background: 'transparent', border: 'none', color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }} 
-                      title="Copy to Clipboard"
-                    >
-                      <Copy size={12} />
-                    </button>
-                    <button 
-                      onClick={() => insertToEditor(code, true)} 
-                      style={{ 
-                        background: 'var(--accent)', 
-                        border: 'none', 
-                        color: 'white', 
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px', 
-                        fontSize: '0.65rem', 
-                        fontWeight: '700' 
-                      }}
-                    >
-                      <Save size={12} /> OVERWRITE
-                    </button>
-                    <button 
-                      onClick={() => insertToEditor(code, false)} 
-                      style={{ 
-                        background: 'rgba(255,255,255,0.05)', 
-                        border: '1px solid var(--border-subtle)', 
-                        color: 'var(--text-1)', 
-                        padding: '4px 8px',
-                        borderRadius: '4px',
-                        cursor: 'pointer', 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '6px', 
-                        fontSize: '0.65rem', 
-                        fontWeight: '700' 
-                      }}
-                    >
-                      <ArrowRight size={12} /> APPEND
-                    </button>
+              <div key={i} className="bg-slate-950 rounded-xl border border-white/10 overflow-hidden shadow-2xl w-full my-2">
+                <div className="px-3 py-2 bg-white/5 border-b border-white/5 flex flex-wrap justify-between items-center gap-2">
+                  <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">{lang || 'code'}</span>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => copyToClipboard(code)} className="p-1.5 hover:bg-white/10 rounded-lg transition-all" title="Copy"><Copy size={12} /></button>
+                    <button onClick={() => insertToEditor(code, true)} className="px-2 py-1 bg-indigo-600 text-white text-[9px] font-black rounded-md hover:bg-indigo-500 transition-all">OVERWRITE</button>
+                    <button onClick={() => insertToEditor(code, false)} className="px-2 py-1 bg-white/5 text-slate-300 text-[9px] font-black rounded-md hover:bg-white/10 transition-all">APPEND</button>
                   </div>
                 </div>
-                <pre className="custom-scrollbar" style={{ padding: '16px', margin: 0, fontSize: '0.75rem', fontFamily: 'var(--font-mono)', overflowX: 'auto', color: '#cbd5e1', lineHeight: '1.5' }}>{code}</pre>
+                <pre className="p-4 m-0 text-xs font-mono overflow-x-auto text-slate-300 custom-scrollbar">{code}</pre>
               </div>
             );
           }
-          return <p key={i} style={{ margin: 0, color: 'var(--text-1)', wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}>{part}</p>;
+          return <p key={i} className="m-0 text-[var(--text-1)] text-sm leading-relaxed whitespace-pre-wrap">{part}</p>;
         })}
       </div>
     );
@@ -286,27 +233,10 @@ const CodeWorkspace = ({ user, settings }) => {
       const newMsgs = [...aiChat, { role: 'user', content: userMsg }];
       setAiChat(newMsgs);
       setAiLoading(true);
-      if (!settings.groq_api_key) {
-        setAiChat([...newMsgs, { role: 'assistant', content: '⚠️ Groq API Key missing. Please set your key in the main Settings panel.' }]);
-        setAiLoading(false);
-        return;
-      }
       try {
         const codingSystemPrompt = architectMode ? `You are the Nexus Senior Software Architect. 
-        Your goal is to provide high-quality, production-ready code. 
-        Current Context:
-        - Active File: ${activeFile || 'None'}
-        - Language: ${activeFile ? activeFile.split('.').pop() : 'Plain Text'}
-        - File Content: \`\`\`${activeFile ? (fileContents[activeFile] || 'Empty') : 'N/A'}\`\`\`
+        Guidelines: Use markdown blocks for code. If asked to fix, provide full corrected file content.` : `Helpful coding assistant.`;
         
-        Guidelines:
-        1. When providing code, use markdown blocks with the correct language tag.
-        2. If asked to fix a file, provide the full corrected file content in one block.
-        3. Explain your logic briefly before or after the code.
-        4. Focus on performance, security, and best practices.
-        5. In Architect Mode, prioritize scalability and clean code principles.` 
-        : `You are a helpful coding assistant. Help the user write and debug code.`;
-
         const streamSettings = { ...settings, system_prompt: codingSystemPrompt };
         let streamingMsgs = [...newMsgs, { role: 'assistant', content: '' }];
         setAiChat(streamingMsgs);
@@ -325,194 +255,207 @@ const CodeWorkspace = ({ user, settings }) => {
         const finalResponse = result?.response || streamingMsgs[streamingMsgs.length - 1]?.content || '';
         setAiChat([...newMsgs, { role: 'assistant', content: finalResponse }]);
 
-        // Auto-Apply logic if enabled
         if (autoApply && finalResponse.includes('```')) {
           const codeMatch = finalResponse.match(/```[\w]*\n([\s\S]*?)```/);
           if (codeMatch && codeMatch[1]) {
             insertToEditor(codeMatch[1].trim(), true);
           }
         }
-
       } catch (err) {
-        console.error(err);
         setAiChat([...newMsgs, { role: 'assistant', content: `⚠️ Error: ${err.message}` }]);
       } finally {
-
         setAiLoading(false);
       }
     }
   };
 
-  const handleFixError = () => {
-    if (!output || output === 'Ready.') return;
-    setShowAi(true);
-    setAiInput(`I encountered an error while running my code. Here is the terminal output:\n\n${output}\n\nPlease analyze and provide a fix.`);
-  };
-
-
   return (
-    <div className="code-workspace" style={{ height: '100%', display: 'flex', background: 'var(--bg-0)', position: 'relative' }}>
+    <div className="flex flex-col lg:flex-row h-full bg-[var(--bg-0)] relative overflow-hidden text-[var(--text-0)]">
       
-      {/* Left Sidebar */}
-      <div className="file-explorer" style={{ width: '260px', borderRight: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column', background: 'var(--bg-1)' }}>
-        <div style={{ padding: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: '0.75rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Explorer</span>
-          <button className="icon-btn" style={{ padding: '4px' }} onClick={() => { setSidebarTab('explorer'); setIsCreatingFile(true); }}>
-            <Plus size={14} />
-          </button>
-        </div>
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--border-subtle)' }}>
-          <button 
-            onClick={() => setSidebarTab('explorer')}
-            style={{ flex: 1, padding: '12px 0', background: sidebarTab === 'explorer' ? 'transparent' : 'var(--bg-2)', border: 'none', borderBottom: sidebarTab === 'explorer' ? '2px solid var(--text-0)' : '2px solid transparent', color: sidebarTab === 'explorer' ? 'var(--text-0)' : 'var(--text-2)', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-          >
-            FILES
-          </button>
-          <button 
-            onClick={() => setSidebarTab('packages')}
-            style={{ flex: 1, padding: '12px 0', background: sidebarTab === 'packages' ? 'transparent' : 'var(--bg-2)', border: 'none', borderBottom: sidebarTab === 'packages' ? '2px solid var(--text-0)' : '2px solid transparent', color: sidebarTab === 'packages' ? 'var(--text-0)' : 'var(--text-2)', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
-          >
-            PACKAGES
-          </button>
-        </div>
-
-        {sidebarTab === 'explorer' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px' }}>
-            {isCreatingFile && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', marginBottom: '8px', background: 'var(--bg-0)', borderRadius: '4px', border: '1px solid var(--accent)' }}>
-                <FileCode size={14} color="var(--accent)" />
-                <input 
-                  autoFocus
-                  type="text" 
-                  value={newFileName}
-                  onChange={e => setNewFileName(e.target.value)}
-                  onKeyDown={handleCreateFile}
-                  onBlur={() => setIsCreatingFile(false)}
-                  placeholder="filename.py"
-                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: 'var(--text-0)', fontSize: '0.85rem' }}
-                />
-              </div>
-            )}
-            {files.map(file => (
-              <div 
-                key={file.path}
-                onClick={() => openFile(file.path, file.name)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '8px', padding: '8px', borderRadius: '4px', cursor: 'pointer',
-                  background: activeFile === file.path ? 'var(--bg-2)' : 'transparent',
-                  color: activeFile === file.path ? 'var(--text-0)' : 'var(--text-1)',
-                  fontSize: '0.85rem', marginBottom: '2px'
-                }}
-              >
-                <FileCode size={14} strokeWidth={1.5} />
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{file.name}</span>
-              </div>
-            ))}
+      {/* File Explorer - Sidebar */}
+      <div className={`
+        fixed lg:relative z-[100] h-full lg:h-auto w-[280px] bg-[var(--bg-1)] backdrop-blur-3xl border-r border-[var(--border-subtle)] flex flex-col transition-all duration-500
+        ${showExplorer ? 'translate-x-0' : '-translate-x-full lg:-ml-[280px]'}
+      `}>
+        <div className="p-6 flex items-center justify-between border-b border-[var(--border-subtle)]">
+          <span className="text-[10px] font-black uppercase tracking-[0.25em] text-[var(--text-2)] flex items-center gap-2">
+            <Folder size={14} className="text-[var(--accent)]" /> Workspace
+          </span>
+          <div className="flex gap-1">
+            <button className="p-1.5 hover:bg-[var(--bg-hover)] rounded-lg text-[var(--text-2)]" onClick={() => { setSidebarTab('explorer'); setIsCreatingFile(true); }}>
+              <Plus size={16} />
+            </button>
+            <button className="lg:hidden p-1.5 hover:bg-[var(--bg-hover)] rounded-lg text-[var(--text-2)]" onClick={() => setShowExplorer(false)}>
+              <X size={16} />
+            </button>
           </div>
-        )}
+        </div>
+        
+        <div className="flex border-b border-[var(--border-subtle)]">
+          {[
+            { id: 'explorer', label: 'Files', icon: Folder },
+            { id: 'packages', label: 'Deps', icon: Package },
+            { id: 'snippets', label: 'Snips', icon: Code },
+            { id: 'history', label: 'History', icon: Clock }
+          ].map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setSidebarTab(tab.id)}
+              className={`flex-1 py-3 flex flex-col items-center gap-1 text-[8px] font-black uppercase tracking-widest transition-all ${sidebarTab === tab.id ? 'text-[var(--accent)] border-b-2 border-[var(--accent)] bg-[var(--accent)]/5' : 'text-[var(--text-2)] hover:text-[var(--text-0)]'}`}
+            >
+              <tab.icon size={12} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
 
-        {sidebarTab === 'packages' && (
-          <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-            <div style={{ marginBottom: '24px' }}>
-              <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-2)', marginBottom: '8px' }}>Install Package</label>
-              <div style={{ display: 'flex', gap: '8px' }}>
-                <input 
-                  type="text" 
-                  value={newPkgName}
-                  onChange={e => setNewPkgName(e.target.value)}
-                  placeholder="e.g. requests, numpy"
-                  style={{ flex: 1, padding: '8px', background: 'var(--bg-0)', border: '1px solid var(--border-subtle)', borderRadius: '4px', color: 'var(--text-0)', outline: 'none', fontSize: '0.8rem' }}
-                />
-                <button onClick={handleInstallPkg} disabled={loading} style={{ padding: '8px', background: 'var(--text-0)', color: 'var(--bg-0)', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>
-                  <Plus size={14} />
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+          {sidebarTab === 'explorer' && (
+            <div className="space-y-1">
+              {isCreatingFile && (
+                <div className="flex items-center gap-3 p-3 bg-[var(--accent)]/5 rounded-xl border border-[var(--accent)]/20 animate-in zoom-in-95 duration-300">
+                  <FileCode size={16} className="text-[var(--accent)]" />
+                  <input 
+                    autoFocus
+                    type="text" 
+                    value={newFileName}
+                    onChange={e => setNewFileName(e.target.value)}
+                    onKeyDown={handleCreateFile}
+                    onBlur={() => setIsCreatingFile(false)}
+                    placeholder="app.py"
+                    className="flex-1 bg-transparent border-none outline-none text-[var(--text-0)] text-sm font-bold placeholder:text-[var(--text-2)]"
+                  />
+                </div>
+              )}
+              {files.map(file => (
+                <button 
+                  key={file.path}
+                  onClick={() => openFile(file.path, file.name)}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all group ${activeFile === file.path ? 'bg-[var(--bg-2)] text-[var(--text-0)] border border-[var(--border-subtle)] shadow-sm' : 'text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)]'}`}
+                >
+                  <FileCode size={16} className={activeFile === file.path ? 'text-[var(--accent)]' : 'text-[var(--text-2)] group-hover:text-[var(--text-1)]'} />
+                  <span className="text-sm font-bold truncate">{file.name}</span>
                 </button>
+              ))}
+            </div>
+          )}
+
+          {sidebarTab === 'packages' && (
+            <div className="space-y-6">
+              <div className="space-y-3 px-2">
+                <label className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest">Install Dependency</label>
+                <div className="flex gap-2">
+                  <input 
+                    type="text" 
+                    value={newPkgName}
+                    onChange={e => setNewPkgName(e.target.value)}
+                    placeholder="e.g. numpy"
+                    className="flex-1 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl px-4 py-2 text-sm text-[var(--text-0)] outline-none focus:border-[var(--accent)]"
+                  />
+                  <button onClick={handleInstallPkg} disabled={loading} className="p-2.5 bg-[var(--accent)] text-white rounded-xl shadow-lg">
+                    <Plus size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <h4 className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest px-2">Environment</h4>
+                {packages.map(pkg => (
+                  <div key={pkg.name} className="flex items-center justify-between p-3 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-xl">
+                    <span className="text-xs font-bold text-[var(--text-1)]">{pkg.name}</span>
+                    <span className="text-[10px] font-black text-[var(--accent)] opacity-60">{pkg.version}</span>
+                  </div>
+                ))}
               </div>
             </div>
-            <div>
-              <h4 style={{ fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-2)', marginBottom: '12px' }}>Installed Packages</h4>
-              {packages.map(pkg => (
-                <div key={pkg.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px', background: 'var(--bg-0)', border: '1px solid var(--border-subtle)', borderRadius: '4px', marginBottom: '8px', fontSize: '0.8rem' }}>
-                  <span style={{ fontWeight: '600' }}>{pkg.name}</span>
-                  <span style={{ color: 'var(--text-2)' }}>{pkg.version}</span>
+          )}
+
+          {sidebarTab === 'snippets' && (
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest px-2">Quantum Snippets</h4>
+              {SNIPPETS.map(s => (
+                <div key={s.name} className="group p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl hover:border-[var(--accent)] transition-all">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-black text-[var(--text-1)]">{s.name}</span>
+                    <button onClick={() => insertToEditor(s.code)} className="text-[9px] font-black text-[var(--accent)] uppercase tracking-tighter bg-[var(--accent)]/10 px-2 py-1 rounded hover:bg-[var(--accent)] hover:text-white transition-all">Inject</button>
+                  </div>
+                  <pre className="text-[10px] font-mono text-[var(--text-2)] truncate opacity-60">{s.code.slice(0, 50)}...</pre>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {sidebarTab === 'history' && (
+            <div className="space-y-4">
+              <h4 className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest px-2">Neural History</h4>
+              {activeFile ? (
+                <div className="space-y-3">
+                  <div className="p-4 bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-2xl">
+                    <p className="text-xs font-bold text-[var(--text-0)]">Current Draft</p>
+                    <p className="text-[9px] text-[var(--text-2)] mt-1 uppercase tracking-widest">Active Session</p>
+                  </div>
+                  {[1, 2].map(v => (
+                    <div key={v} className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl opacity-60">
+                      <p className="text-xs font-bold text-[var(--text-1)]">Snapshot v1.0.{v}</p>
+                      <p className="text-[9px] text-[var(--text-2)] mt-1 uppercase tracking-widest">Saved 2h ago</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-[var(--text-2)] text-center py-10 italic">No file selected</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Editor Content Area */}
+      <div className="flex-1 flex flex-col min-w-0 bg-[var(--bg-0)] relative">
+        
+        {/* Navigation Toolbar */}
+        <div className="h-14 bg-[var(--bg-glass)] border-b border-[var(--border-subtle)] flex items-center justify-between px-4 sticky top-0 z-[50] backdrop-blur-xl">
+          <div className="flex items-center gap-3">
+            <button className="p-2 hover:bg-[var(--bg-hover)] rounded-xl text-[var(--text-2)] transition-all" onClick={() => setShowExplorer(!showExplorer)}>
+              <Layout size={18} className={showExplorer ? 'text-[var(--accent)]' : ''} />
+            </button>
+            <div className="hidden lg:flex overflow-x-auto no-scrollbar gap-1 max-w-[500px]">
+              {openFiles.map(f => (
+                <div key={f.path} onClick={() => setActiveFile(f.path)} className={`px-4 py-1.5 rounded-lg flex items-center gap-2 cursor-pointer transition-all border ${activeFile === f.path ? 'bg-[var(--accent)]/10 border-[var(--accent)]/20 text-[var(--accent)]' : 'bg-transparent border-transparent text-[var(--text-2)] hover:text-[var(--text-0)]'}`}>
+                  <span className="text-xs font-black uppercase tracking-tighter truncate max-w-[80px]">{f.name}</span>
+                  <X size={12} className="hover:text-rose-500" onClick={(e) => closeFile(e, f.path)} />
                 </div>
               ))}
             </div>
           </div>
-        )}
-      </div>
 
-      {/* Editor Area */}
-      <div className="editor-area" style={{ flex: 1, display: 'flex', flexDirection: 'column', position: 'relative' }}>
-        
-        {/* Editor Toolbar (Tabs & Actions) */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg-1)', borderBottom: '1px solid var(--border-subtle)' }}>
-          <div className="file-tabs" style={{ display: 'flex', overflowX: 'auto', flex: 1 }}>
-            {openFiles.map(f => (
-              <div 
-                key={f.path}
-                onClick={() => setActiveFile(f.path)}
-                style={{
-                  padding: '10px 16px', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer',
-                  background: activeFile === f.path ? 'var(--bg-0)' : 'transparent',
-                  borderRight: '1px solid var(--border-subtle)',
-                  borderTop: activeFile === f.path ? '2px solid var(--accent)' : '2px solid transparent',
-                  color: activeFile === f.path ? 'var(--text-0)' : 'var(--text-2)',
-                  fontSize: '0.8rem', fontWeight: '600', minWidth: '120px'
-                }}
-              >
-                {f.name}
-                <button 
-                  onClick={(e) => closeFile(e, f.path)} 
-                  style={{ background: 'transparent', border: 'none', color: 'inherit', cursor: 'pointer', marginLeft: 'auto', padding: '2px' }}
-                >
-                  <X size={12} />
-                </button>
-              </div>
-            ))}
-          </div>
-
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '0 16px' }}>
+          <div className="flex items-center gap-2">
             <button 
               onClick={() => setCollabMode(!collabMode)}
-              style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: collabMode ? 'var(--accent)' : 'transparent', color: collabMode ? '#fff' : 'var(--text-1)', border: collabMode ? 'none' : '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '700', cursor: 'pointer', transition: '0.2s' }}
+              className={`hidden sm:flex items-center gap-2 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${collabMode ? 'bg-[var(--accent)] text-white shadow-lg shadow-indigo-500/20' : 'bg-[var(--bg-hover)] text-[var(--text-2)] border border-[var(--border-subtle)] hover:text-[var(--text-0)]'}`}
             >
-              <Users size={14} /> Collab {collabMode && 'Active'}
+              <Users size={14} /> <span>{collabMode ? 'Collab Active' : 'Go Live'}</span>
             </button>
-            <button className="icon-btn" onClick={() => { setShowAi(!showAi); setShowSnippets(false); setShowHistory(false); }} title="AI Assistant">
-              <Activity size={16} color={showAi ? 'var(--accent)' : 'currentColor'} />
+            <button className="p-2.5 bg-[var(--bg-hover)] text-[var(--text-2)] rounded-xl hover:text-[var(--accent)] lg:hidden" onClick={() => setShowAi(!showAi)}>
+              <Cpu size={18} />
             </button>
-            <button className="icon-btn" onClick={() => { setShowSnippets(!showSnippets); setShowAi(false); setShowHistory(false); }} title="Snippets">
-              <Code size={16} />
+            <button onClick={handleRun} disabled={loading || !activeFile} className={`flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-xl shadow-lg active:scale-95 transition-all text-xs font-black uppercase tracking-widest ${loading ? 'opacity-50' : ''}`}>
+              {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="white" />}
+              <span className="hidden sm:inline">Execute</span>
             </button>
-            <button className="icon-btn" onClick={() => { setShowHistory(!showHistory); setShowAi(false); setShowSnippets(false); }} title="Version History">
-              <Clock size={16} />
-            </button>
-            <div style={{ width: '1px', height: '24px', background: 'var(--border-subtle)', margin: '0 4px' }} />
-            <button className="icon-btn" onClick={handleSave} disabled={loading || !activeFile} title="Save (Ctrl+S)">
-              <Save size={16} />
-            </button>
-            <button 
-              onClick={handleRun} 
-              disabled={loading || !activeFile}
-              style={{ padding: '6px 16px', background: 'var(--text-0)', color: 'var(--bg-0)', border: 'none', borderRadius: '4px', fontSize: '0.75rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-            >
-              {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="currentColor" />}
-              Run
+            <button className="p-2.5 bg-[var(--bg-hover)] text-[var(--text-2)] rounded-xl hover:text-[var(--text-0)]" onClick={handleSave} disabled={!activeFile}>
+              <Save size={18} />
             </button>
           </div>
         </div>
 
-        {/* Main Editor */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        {/* Editor & Terminal Wrapper */}
+        <div className="flex-1 flex flex-col relative overflow-hidden">
           {activeFile ? (
             <textarea 
+              ref={editorRef}
               value={fileContents[activeFile] || ''}
               onChange={(e) => handleContentChange(e.target.value)}
-              style={{
-                flex: 1, background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font-mono)',
-                fontSize: '14px', lineHeight: '1.6', padding: '24px', border: 'none', outline: 'none',
-                resize: 'none', tabSize: 4
-              }}
+              spellCheck={false}
+              className="flex-1 bg-[var(--bg-0)] text-[var(--text-1)] font-mono text-sm md:text-base p-6 outline-none resize-none custom-scrollbar leading-relaxed"
               onKeyDown={(e) => {
                 if (e.key === 'Tab') {
                   e.preventDefault();
@@ -521,230 +464,127 @@ const CodeWorkspace = ({ user, settings }) => {
                   handleContentChange((fileContents[activeFile] || '').substring(0, start) + "    " + (fileContents[activeFile] || '').substring(end));
                   setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 4; }, 0);
                 }
-                const pairs = { '(': ')', '{': '}', '[': ']', '"': '"', "'": "'" };
-                if (pairs[e.key]) {
-                  e.preventDefault();
-                  const start = e.target.selectionStart;
-                  const end = e.target.selectionEnd;
-                  const val = fileContents[activeFile] || '';
-                  const newVal = val.substring(0, start) + e.key + pairs[e.key] + val.substring(end);
-                  handleContentChange(newVal);
-                  setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 1; }, 0);
-                }
               }}
             />
           ) : (
-            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)' }}>
-              <FileCode size={48} style={{ marginBottom: '16px', opacity: 0.5 }} />
-              <p>Select or create a file to start coding</p>
+            <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-2)] p-10 text-center animate-in fade-in duration-700">
+              <div className="w-20 h-20 bg-[var(--bg-hover)] rounded-3xl flex items-center justify-center mb-6 border border-[var(--border-subtle)] shadow-sm">
+                <Code size={40} className="opacity-20" />
+              </div>
+              <h2 className="text-xl font-black text-[var(--text-0)] mb-2 tracking-tight">Neural Workspace</h2>
+              <p className="text-sm font-medium max-w-xs opacity-60">Architect high-performance systems. Select a file to begin synthesis.</p>
             </div>
           )}
 
-          {/* Terminal / Output */}
-          <div className="terminal-panel" style={{ height: '220px', borderTop: '1px solid var(--border-default)', display: 'flex', flexDirection: 'column', background: 'var(--bg-1)' }}>
-            <div style={{ padding: '8px 16px', background: 'var(--bg-2)', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Terminal size={14} />
-                <span style={{ fontSize: '0.7rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Terminal Output</span>
+          {/* Terminal Drawer */}
+          <div className={`
+            absolute bottom-0 left-0 right-0 z-40 bg-[var(--bg-1)] backdrop-blur-3xl border-t border-[var(--border-subtle)] transition-all duration-500
+            ${showTerminal ? 'h-[40%] md:h-[280px]' : 'h-10'}
+          `}>
+            <div className="flex items-center justify-between px-4 py-2 border-b border-[var(--border-subtle)] bg-[var(--bg-hover)] cursor-pointer" onClick={() => setShowTerminal(!showTerminal)}>
+              <div className="flex items-center gap-2">
+                <Terminal size={14} className="text-[var(--accent)]" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-1)]">Virtual Shell</span>
               </div>
-              <div style={{ display: 'flex', gap: '8px' }}>
+              <div className="flex items-center gap-3">
+                {output && output !== 'Ready.' && (
+                  <button onClick={(e) => { e.stopPropagation(); setShowAi(true); setAiInput(`Analyze and fix this terminal output:\n${output}`); }} className="text-[9px] font-black text-rose-500 uppercase tracking-tighter bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 hover:bg-rose-500 hover:text-white transition-all">AI FIX</button>
+                )}
+                <ChevronRight size={16} className={`text-[var(--text-2)] transition-transform ${showTerminal ? 'rotate-90' : ''}`} />
+              </div>
+            </div>
+            {showTerminal && (
+              <pre className="p-4 md:p-6 h-[calc(100%-40px)] overflow-y-auto text-xs md:text-sm font-mono text-[var(--text-1)] leading-relaxed custom-scrollbar whitespace-pre-wrap">
+                <span className="text-[var(--accent)] opacity-50 font-bold">$ </span>{output || 'Nexus Core ready for execution...'}
+              </pre>
+            )}
+          </div>
+        </div>
+
+        {/* AI Architect Panel */}
+        {showAi && (
+          <div className={`
+            fixed inset-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[480px] z-[200] bg-[var(--bg-2)] backdrop-blur-3xl flex flex-col shadow-2xl border-l border-[var(--border-subtle)] animate-in slide-in-from-right-10 duration-500
+          `}>
+            <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-1)]">
+              <div className="flex items-center gap-4">
+                <div className="w-11 h-11 bg-[var(--accent-gradient)] rounded-xl flex items-center justify-center shadow-xl shadow-indigo-500/20">
+                  <Cpu size={22} color="white" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-[var(--text-0)] leading-none">Senior Architect</h3>
+                  <div className="flex items-center gap-2 mt-2">
+                    <span className="text-[9px] font-black text-[var(--accent)] uppercase tracking-widest">Neural Sync</span>
+                    <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
                 <button 
-                  onClick={() => { setShowAi(true); setAiInput(`I encountered this error in ${activeFile || 'the console'}:\n\n${output}\n\nCan you fix it?`); }}
-                  style={{ 
-                    padding: '4px 12px', 
-                    background: 'rgba(239, 68, 68, 0.1)', 
-                    border: '1px solid rgba(239, 68, 68, 0.3)', 
-                    color: '#ef4444', 
-                    borderRadius: '6px', 
-                    fontSize: '0.65rem', 
-                    fontWeight: '800',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '6px'
-                  }}
+                  onClick={() => setAutoApply(!autoApply)}
+                  className={`px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-widest border transition-all ${autoApply ? 'bg-[var(--accent)] border-transparent text-white' : 'bg-[var(--bg-hover)] border-[var(--border-subtle)] text-[var(--text-2)]'}`}
                 >
-                  <Activity size={10} /> AI DEBUG FIX
+                  Auto-Sync {autoApply ? 'ON' : 'OFF'}
+                </button>
+                <button className="p-2 hover:bg-[var(--bg-hover)] rounded-full text-[var(--text-2)] transition-all" onClick={() => setShowAi(false)}>
+                  <X size={20} />
                 </button>
               </div>
             </div>
 
-            <pre style={{ flex: 1, padding: '16px', margin: 0, fontFamily: 'var(--font-mono)', fontSize: '13px', color: 'var(--text-1)', overflowY: 'auto', whiteSpace: 'pre-wrap' }}>
-              {output || 'Ready.'}
-            </pre>
-
-          </div>
-        </div>
-
-        {/* Snippets Panel */}
-        {showSnippets && (
-          <div style={{ position: 'absolute', top: '48px', right: '0', width: '300px', bottom: '220px', background: 'var(--bg-1)', borderLeft: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: '700' }}>Code Snippets</h3>
-              <button className="icon-btn" onClick={() => setShowSnippets(false)}><X size={14}/></button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              {SNIPPETS.map(s => (
-                <div key={s.name} style={{ marginBottom: '16px', background: 'var(--bg-0)', border: '1px solid var(--border-subtle)', borderRadius: '6px', overflow: 'hidden' }}>
-                  <div style={{ padding: '8px 12px', background: 'var(--bg-2)', fontSize: '0.75rem', fontWeight: '600', display: 'flex', justifyContent: 'space-between' }}>
-                    {s.name}
-                    <button onClick={() => insertSnippet(s.code)} style={{ background: 'transparent', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: '700' }}>Insert</button>
-                  </div>
-                  <pre style={{ padding: '12px', margin: 0, fontSize: '0.7rem', color: 'var(--text-1)', overflowX: 'auto', fontFamily: 'var(--font-mono)' }}>
-                    {s.code}
-                  </pre>
-                </div>
+            {/* AI Action Quick-Row */}
+            <div className="flex gap-2 p-4 bg-[var(--bg-0)] border-b border-[var(--border-subtle)] overflow-x-auto no-scrollbar">
+              {[
+                { label: 'Optimize', icon: Cpu, color: 'text-indigo-500', prompt: 'Optimize this code for performance and memory efficiency.' },
+                { label: 'Refactor', icon: ShieldCheck, color: 'text-emerald-500', prompt: 'Refactor this code to follow Senior Architect best practices.' },
+                { label: 'Document', icon: FileCode, color: 'text-blue-500', prompt: 'Add comprehensive documentation to this file.' },
+                { label: 'Unit Tests', icon: Activity, color: 'text-rose-500', prompt: 'Generate robust unit tests for all functions.' }
+              ].map(action => (
+                <button 
+                  key={action.label}
+                  onClick={() => { setAiInput(action.prompt); handleAiChat({ key: 'Enter' }); }}
+                  className="flex items-center gap-2 px-4 py-2 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-xl whitespace-nowrap hover:bg-[var(--bg-hover)] transition-all shadow-sm"
+                >
+                  <action.icon size={14} className={action.color} />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-1)]">{action.label}</span>
+                </button>
               ))}
             </div>
-          </div>
-        )}
 
-        {/* History Panel */}
-        {showHistory && (
-          <div style={{ position: 'absolute', top: '48px', right: '0', width: '300px', bottom: '220px', background: 'var(--bg-1)', borderLeft: '1px solid var(--border-subtle)', boxShadow: 'var(--shadow-lg)', zIndex: 10, display: 'flex', flexDirection: 'column' }}>
-            <div style={{ padding: '16px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <h3 style={{ fontSize: '0.85rem', fontWeight: '700' }}>Version Control</h3>
-              <button className="icon-btn" onClick={() => setShowHistory(false)}><X size={14}/></button>
-            </div>
-            <div style={{ flex: 1, overflowY: 'auto', padding: '16px' }}>
-              {activeFile ? (
-                <>
-                  <div style={{ padding: '12px', borderLeft: '2px solid var(--accent)', background: 'var(--bg-2)', marginBottom: '8px', borderRadius: '0 6px 6px 0' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '4px' }}>Current Version</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)', marginBottom: '10px' }}>Just now • Unsaved</div>
-                    <button 
-                      onClick={() => { setShowAi(true); setAiInput(`Can you explain the changes in ${activeFile.split('/').pop()}?`); }}
-                      style={{ padding: '4px 8px', background: 'rgba(124, 58, 237, 0.1)', color: 'var(--accent)', border: 'none', borderRadius: '4px', fontSize: '0.65rem', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                    >
-                      <Activity size={10} /> Analyze with AI
-                    </button>
-                  </div>
-                  <div style={{ padding: '12px', borderLeft: '2px solid var(--border-subtle)', background: 'var(--bg-0)', marginBottom: '8px', cursor: 'pointer', borderRadius: '0 6px 6px 0' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '4px' }}>v1.0.2</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>2 hours ago • By You</div>
-                  </div>
-                  <div style={{ padding: '12px', borderLeft: '2px solid var(--border-subtle)', background: 'var(--bg-0)', marginBottom: '8px', cursor: 'pointer', borderRadius: '0 6px 6px 0' }}>
-                    <div style={{ fontSize: '0.8rem', fontWeight: '600', marginBottom: '4px' }}>Initial Commit</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-2)' }}>Yesterday • By You</div>
-                  </div>
-                </>
-              ) : (
-                <div style={{ color: 'var(--text-2)', fontSize: '0.8rem', textAlign: 'center', marginTop: '24px' }}>Select a file to view history</div>
-              )}
-            </div>
-          </div>
-        )}
-        {/* AI Assistant Panel */}
-        {showAi && (
-          <div style={{ position: 'absolute', top: '48px', right: '12px', width: '380px', bottom: '232px', background: 'var(--bg-1)', border: '1px solid var(--border-subtle)', borderRadius: '16px', boxShadow: '0 20px 50px rgba(0,0,0,0.3)', zIndex: 100, display: 'flex', flexDirection: 'column', overflow: 'hidden', backdropFilter: 'blur(20px)' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-2)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '32px', height: '32px', background: 'var(--accent-gradient)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <Cpu size={18} color="white" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '0.85rem', fontWeight: '800', margin: 0 }}>Nexus CodeBot</h3>
-                  <div style={{ fontSize: '0.65rem', color: 'var(--accent)', fontWeight: '700' }}>SENIOR ARCHITECT</div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }} onClick={() => setAutoApply(!autoApply)}>
-                  <div style={{ width: '32px', height: '16px', background: autoApply ? 'var(--accent)' : 'var(--bg-0)', borderRadius: '10px', position: 'relative', border: '1px solid var(--border-subtle)', transition: '0.2s' }}>
-                    <div style={{ width: '12px', height: '12px', background: 'white', borderRadius: '50%', position: 'absolute', top: '1px', left: autoApply ? '17px' : '1px', transition: '0.2s' }} />
-                  </div>
-                  <span style={{ fontSize: '0.65rem', fontWeight: '700', color: 'var(--text-2)' }}>AUTO-SYNC</span>
-                </div>
-                <button className="icon-btn" onClick={() => setShowAi(false)} style={{ borderRadius: '50%', width: '28px', height: '28px' }}><X size={14}/></button>
-              </div>
-            </div>
-
-            {/* Action Bar */}
-            <div style={{ display: 'flex', gap: '8px', padding: '8px 20px', background: 'var(--bg-2)', borderBottom: '1px solid var(--border-subtle)' }}>
-              <button 
-                onClick={() => { setAiInput(`Can you optimize the following code in ${activeFile || 'the current file'} for better performance?\n\n\`\`\`\n${fileContents[activeFile] || ''}\n\`\`\``); setShowAi(true); }}
-                style={{ padding: '6px 12px', background: 'var(--bg-1)', border: '1px solid var(--border-subtle)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Cpu size={12} color="var(--accent)" /> Optimize
-              </button>
-              <button 
-                onClick={() => { setAiInput(`Can you add comprehensive documentation and docstrings to ${activeFile || 'the current file'}?`); setShowAi(true); }}
-                style={{ padding: '6px 12px', background: 'var(--bg-1)', border: '1px solid var(--border-subtle)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <FileCode size={12} color="#10b981" /> Document
-              </button>
-              <button 
-                onClick={() => { setAiInput(`Can you generate unit tests for the functions in ${activeFile || 'the current file'}?`); setShowAi(true); }}
-                style={{ padding: '6px 12px', background: 'var(--bg-1)', border: '1px solid var(--border-subtle)', borderRadius: '6px', fontSize: '0.7rem', fontWeight: '700', color: 'var(--text-1)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                <Activity size={12} color="#f59e0b" /> Test
-              </button>
-            </div>
-
-            <div className="custom-scrollbar" style={{ flex: 1, position: 'relative', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px', background: 'var(--bg-0)', padding: '20px' }}>
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 bg-[var(--bg-0)]">
               {aiChat.map((m, i) => (
-                <div key={i} style={{ 
-                  alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', 
-                  maxWidth: '85%', 
-                  padding: '12px 16px', 
-                  borderRadius: m.role === 'user' ? '16px 16px 2px 16px' : '16px 16px 16px 2px', 
-                  background: m.role === 'user' ? 'var(--accent)' : 'var(--bg-1)', 
-                  color: m.role === 'user' ? '#fff' : 'var(--text-1)', 
-                  fontSize: '0.85rem', 
-                  border: m.role === 'user' ? 'none' : '1px solid var(--border-subtle)', 
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  lineHeight: '1.5',
-                  transition: 'all 0.2s ease',
-                  cursor: 'default'
-                }}
-                className="codebot-message"
-                onMouseEnter={e => {
-                  e.currentTarget.style.transform = 'translateY(-2px)';
-                  e.currentTarget.style.boxShadow = '0 8px 20px rgba(0,0,0,0.15)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.transform = 'translateY(0)';
-                  e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)';
-                }}
-                >
-                  <div style={{ fontSize: '0.65rem', fontWeight: '800', marginBottom: '6px', opacity: 0.7, textTransform: 'uppercase', color: m.role === 'user' ? 'rgba(255,255,255,0.8)' : 'var(--accent)' }}>{m.role}</div>
-                  <MessageContent content={m.content} />
+                <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                  <div className={`max-w-[92%] p-5 rounded-2xl border ${m.role === 'user' ? 'bg-[var(--accent)] border-transparent text-white rounded-br-none shadow-xl shadow-indigo-500/10' : 'bg-[var(--bg-2)] border-[var(--border-subtle)] text-[var(--text-1)] rounded-bl-none shadow-sm'}`}>
+                    <div className={`text-[8px] font-black uppercase tracking-widest mb-3 ${m.role === 'user' ? 'text-indigo-100' : 'text-[var(--accent)]'}`}>{m.role}</div>
+                    <MessageContent content={m.content} />
+                  </div>
                 </div>
               ))}
               {aiLoading && (
-                <div style={{ alignSelf: 'flex-start', background: 'var(--bg-1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--border-subtle)' }}>
-                  <Loader2 size={16} className="animate-spin" color="var(--accent)" />
+                <div className="flex items-center gap-3 p-4 bg-[var(--bg-hover)] rounded-2xl border border-[var(--border-subtle)] w-fit animate-pulse">
+                  <Loader2 size={18} className="animate-spin text-[var(--accent)]" />
+                  <span className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest italic">Architect Thinking...</span>
                 </div>
               )}
               <div ref={aiChatEndRef} />
             </div>
-            <div style={{ padding: '20px', background: 'var(--bg-1)', borderTop: '1px solid var(--border-subtle)' }}>
-              <div 
-                style={{ 
-                  display: 'flex', 
-                  gap: '10px', 
-                  background: 'var(--bg-2)', 
-                  padding: '6px', 
-                  borderRadius: '10px', 
-                  border: '1px solid var(--border-subtle)',
-                  transition: 'all 0.2s ease'
-                }}
-                onFocusCapture={e => e.currentTarget.style.borderColor = 'var(--accent)'}
-                onBlurCapture={e => e.currentTarget.style.borderColor = 'var(--border-subtle)'}
-              >
+
+            <div className="p-6 border-t border-[var(--border-subtle)] bg-[var(--bg-1)] backdrop-blur-xl">
+              <div className="flex gap-2 p-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus-within:border-[var(--accent)] transition-all shadow-sm">
                 <input 
                   type="text" 
                   value={aiInput}
                   onChange={e => setAiInput(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && handleAiChat(e)}
-                  placeholder="Ask about your code..."
-                  style={{ flex: 1, padding: '10px 14px', background: 'transparent', border: 'none', color: 'var(--text-0)', outline: 'none', fontSize: '0.85rem' }}
+                  placeholder="Query Architect Intelligence..."
+                  className="flex-1 bg-transparent border-none outline-none text-[var(--text-0)] text-sm font-bold px-4 py-2 placeholder:text-[var(--text-2)]"
                 />
                 <button 
                   onClick={() => handleAiChat({ key: 'Enter' })}
                   disabled={aiLoading || !aiInput.trim()}
-                  style={{ background: 'var(--accent)', color: 'white', border: 'none', borderRadius: '8px', width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', opacity: aiInput.trim() ? 1 : 0.5 }}
+                  className="w-11 h-11 bg-[var(--accent)] text-white rounded-xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50"
                 >
-                  <ArrowRight size={18} />
+                  <ArrowRight size={20} />
                 </button>
               </div>
             </div>

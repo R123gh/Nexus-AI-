@@ -118,28 +118,7 @@ html, body, #root {
 }
 
 /* ---------- Sidebar ---------- */
-.sidebar {
-    @apply w-[280px] bg-[var(--bg-glass)] backdrop-blur-[32px] border-r border-[var(--border-subtle)] flex flex-col z-[1000] transition-all duration-300;
-}
-
-.sidebar-header {
-    padding: 20px 18px;
-    border-bottom: 1px solid var(--border-subtle);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.sidebar-logo {
-    font-family: var(--font-heading);
-    font-weight: 700;
-    font-size: 1.15rem;
-    color: var(--text-0);
-    letter-spacing: -0.02em;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
+/* Legacy Sidebar Styles Removed - Now handled by Tailwind Utility Classes */
 
 .sidebar-nav {
     flex: 1;

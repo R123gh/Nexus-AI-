@@ -53,7 +53,6 @@ def handle_voice():
         model = validate_model(request.form.get('model', ''))
         temperature = validate_temperature(request.form.get('temperature', 0.7))
 
-        print(f"[*] Voice request received. User ID: {request.form.get('user_id')}")
         
         # Save audio with unique filename
         import uuid
@@ -62,11 +61,9 @@ def handle_voice():
         filename = f"voice_{unique_id}.webm"
         filepath = os.path.join(UPLOAD_FOLDER, filename)
         
-        print(f"[*] Saving audio to {filepath}...")
         audio_file.save(filepath)
 
         try:
-            print("[*] Calling transcription service...")
             # 1. Transcribe audio
             transcript = transcribe_audio(filepath, api_key)
 
@@ -77,7 +74,6 @@ def handle_voice():
                     'error': 'Empty transcript'
                 }), 200
 
-            print("[*] Generating AI response...")
             # 2. Generate a quick response using a fast model
             from services.groq_service import chat_completion
             from config import FAST_MODEL

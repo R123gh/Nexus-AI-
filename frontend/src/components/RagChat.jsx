@@ -8,6 +8,19 @@ import { marked } from 'marked';
 import { createNotification } from '../utils/notifications';
 
 const RagChat = ({ kb, onBack, settings, user }) => {
+  if (!kb) {
+    return (
+      <div className="h-full flex items-center justify-center p-8 text-center bg-[var(--bg-0)]">
+        <div className="space-y-4">
+          <AlertCircle size={48} className="mx-auto text-rose-500 opacity-50" />
+          <h2 className="text-xl font-black text-[var(--text-0)]">Context Error</h2>
+          <p className="text-[var(--text-2)] max-w-xs mx-auto font-medium">The selected knowledge base context was lost. Please re-select it from the RAG engine.</p>
+          <button onClick={onBack} className="px-6 py-2 bg-[var(--accent)] text-white rounded-xl font-bold">Return to Engine</button>
+        </div>
+      </div>
+    );
+  }
+
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
