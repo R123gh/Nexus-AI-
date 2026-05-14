@@ -19,7 +19,7 @@ Render is great for hosting all three components.
 3. Root Directory: `backend`
 4. Runtime: `Python`
 5. Build Command: `pip install --break-system-packages -r requirements.txt`
-6. Start Command: `gunicorn --worker-class gevent -w 1 app:app`
+6. Start Command: `python -m gunicorn --worker-class gevent -w 1 app:app`
 7. **Environment Variables**: Add your `GROQ_API_KEY`, `MONGO_URI`, etc.
 8. Copy the provided URL (e.g., `https://nexus-python.onrender.com`).
 
