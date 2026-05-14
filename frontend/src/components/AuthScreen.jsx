@@ -102,7 +102,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-sm"
+                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-4 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-base sm:text-sm"
                 />
               </div>
 
@@ -116,7 +116,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete={isLogin ? "current-password" : "new-password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-sm"
+                  className="w-full bg-white/[0.03] border border-white/5 rounded-2xl py-4 pl-12 pr-12 text-white placeholder:text-slate-600 outline-none focus:border-indigo-500/40 focus:bg-white/[0.05] transition-all font-bold text-base sm:text-sm"
                 />
                 <button 
                   type="button"

@@ -363,83 +363,61 @@ const ToolPanel = ({ tool, category, onClose, settings }) => {
   };
 
   return (
-    <div className="tool-panel-overlay" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.6)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center',
-      backdropFilter: 'blur(8px)', padding: '40px'
-    }}>
-      <div className="tool-panel" style={{
-        width: '100%', maxWidth: '900px', height: '90vh', background: 'var(--bg-1)',
-        borderRadius: '16px', border: '1px solid var(--border-subtle)', display: 'flex', flexDirection: 'column',
-        animation: 'fadeIn 0.2s ease-out', boxShadow: '0 24px 48px rgba(0,0,0,0.2)'
-      }}>
-        <div className="tool-panel-header" style={{ padding: '24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000] flex items-center justify-center p-4 md:p-10 animate-in fade-in duration-300">
+      <div className="w-full max-w-4xl h-[90vh] md:h-[85vh] bg-[var(--bg-1)] border border-[var(--border-subtle)] rounded-[2rem] flex flex-col shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden">
+        <div className="p-6 md:p-8 border-b border-[var(--border-subtle)] flex items-center justify-between bg-white/[0.02]">
           <div>
-            <h3 style={{ fontSize: '1.2rem', fontWeight: '700' }}>{tool.name}</h3>
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>{category.label}</span>
+            <h3 className="text-xl font-black text-[var(--text-0)] tracking-tight">{tool.name}</h3>
+            <span className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest">{category.label}</span>
           </div>
-          <button className="icon-btn" onClick={onClose}>
+          <button className="p-2.5 rounded-xl bg-[var(--bg-2)] text-[var(--text-2)] hover:text-rose-500 hover:bg-rose-500/10 transition-all" onClick={onClose}>
             <X size={20} />
           </button>
         </div>
 
-        <div className="tool-panel-body" style={{ flex: 1, overflowY: 'auto', padding: '32px' }}>
-          <p style={{ fontSize: '0.9rem', color: 'var(--text-1)', marginBottom: '32px', lineHeight: '1.6' }}>{tool.desc}</p>
+        <div className="flex-1 overflow-y-auto p-6 md:p-10">
+          <p className="text-sm md:text-base text-[var(--text-1)] mb-8 md:mb-10 leading-relaxed font-medium">{tool.desc}</p>
           
           {!result ? (
-            <div className="tool-form">
+            <div className="space-y-6">
               {renderFormFields()}
               <button 
-                className="tool-submit-btn" 
+                className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black uppercase tracking-widest text-xs shadow-lg shadow-indigo-500/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3"
                 onClick={handleSubmit} 
                 disabled={loading}
-                style={{
-                  width: '100%', padding: '16px', background: 'var(--text-0)', color: 'var(--bg-0)',
-                  border: 'none', borderRadius: '4px', fontWeight: '700', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '12px',
-                  marginTop: '16px', transition: 'var(--transition)'
-                }}
               >
                 {loading ? <Loader2 size={18} className="animate-spin" /> : <Sparkles size={18} />}
-                {loading ? 'Processing...' : `Run ${tool.name}`}
+                {loading ? 'Neural Core Processing...' : `Execute ${tool.name}`}
               </button>
             </div>
           ) : (
-            <div className="tool-result">
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
-                <h4 style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.9rem', color: 'var(--text-1)' }}>
+            <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center justify-between">
+                <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-emerald-500">
                   <CheckCircle size={16} /> Result Generated
                 </h4>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <button className="icon-btn" onClick={() => navigator.clipboard.writeText(result)} title="Copy Result">
+                <div className="flex gap-2">
+                  <button className="p-2.5 rounded-xl bg-[var(--bg-2)] text-[var(--text-2)] hover:text-indigo-400 transition-all" onClick={() => navigator.clipboard.writeText(result)} title="Copy Result">
                     <Copy size={16} />
-                  </button>
-                  <button className="icon-btn" title="Read Aloud">
-                    <Volume2 size={16} />
                   </button>
                 </div>
               </div>
-              <div style={{ padding: '20px', background: 'var(--bg-0)', border: '1px solid var(--border-subtle)', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' }}>
+              <div className="p-6 md:p-8 bg-[var(--bg-0)] border border-[var(--border-subtle)] rounded-3xl shadow-inner text-base sm:text-sm">
                 {renderMarkdown(result)}
               </div>
               <button 
-                className="tool-submit-btn" 
+                className="w-full py-4 bg-white/5 text-[var(--text-1)] border border-[var(--border-subtle)] rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-white/10 transition-all"
                 onClick={() => setResult(null)}
-                style={{
-                  width: '100%', padding: '12px', background: 'transparent', color: 'var(--text-1)',
-                  border: '1px solid var(--border-subtle)', borderRadius: '4px', fontWeight: '600', cursor: 'pointer',
-                  marginTop: '24px'
-                }}
               >
-                Run Again
+                Reset Module
               </button>
             </div>
           )}
 
           {error && (
-            <div style={{ marginTop: '24px', padding: '16px', background: 'rgba(255,59,48,0.1)', border: '1px solid var(--error)', borderRadius: '4px', color: 'var(--error)', display: 'flex', gap: '12px', fontSize: '0.9rem' }}>
-              <AlertCircle size={18} />
-              {error}
+            <div className="mt-8 p-5 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-500 flex items-start gap-3 text-sm font-bold">
+              <AlertCircle size={20} className="shrink-0" />
+              <span>{error}</span>
             </div>
           )}
         </div>

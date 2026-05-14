@@ -108,7 +108,7 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
             </div>
           )}
           
-          <div className="prose prose-invert prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl">
+          <div className="prose prose-invert prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl text-base sm:text-sm">
             {renderContent(displayedText)}
           </div>
           

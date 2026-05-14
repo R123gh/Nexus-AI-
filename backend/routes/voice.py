@@ -69,7 +69,6 @@ def handle_voice():
             print("[*] Calling transcription service...")
             # 1. Transcribe audio
             transcript = transcribe_audio(filepath, api_key)
-            print(f"[+] Transcript: {transcript}")
 
             if not transcript or transcript.strip() == '':
                 return jsonify({
@@ -90,7 +89,6 @@ def handle_voice():
             ]
             
             response_text, _ = chat_completion(messages, api_key, model=FAST_MODEL)
-            print(f"[+] AI Response: {response_text}")
 
             return jsonify({
                 'transcript': transcript,

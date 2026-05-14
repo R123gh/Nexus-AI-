@@ -17,7 +17,8 @@ import {
   ChevronRight,
   Shield,
   Layers,
-  Sparkles
+  Sparkles,
+  X
 } from 'lucide-react';
 import { formatTime } from '../utils/helpers';
 
@@ -33,7 +34,8 @@ const Sidebar = ({
   onSelectConversation, 
   onShowNotifications, 
   unreadCount,
-  setShowAnalytics 
+  setShowAnalytics,
+  onClose 
 }) => {
   const modes = [
     { id: 'chat', icon: MessageSquare, label: 'Neural Chat' },
@@ -60,15 +62,23 @@ const Sidebar = ({
             </div>
             <span className="text-xl font-black tracking-tighter text-[var(--text-0)]">NexusAI</span>
           </div>
-          <button 
-            className="p-2 rounded-xl bg-[var(--bg-2)] text-[var(--text-2)] hover:text-indigo-400 transition-all relative"
-            onClick={onShowNotifications}
-          >
-            <Bell size={18} />
-            {unreadCount > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-[var(--bg-1)]" />
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              className="p-2 rounded-xl bg-[var(--bg-2)] text-[var(--text-2)] hover:text-indigo-400 transition-all relative"
+              onClick={onShowNotifications}
+            >
+              <Bell size={18} />
+              {unreadCount > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full border-2 border-[var(--bg-1)]" />
+              )}
+            </button>
+            <button 
+              className="p-2 rounded-xl bg-[var(--bg-2)] text-[var(--text-2)] md:hidden hover:text-rose-500 transition-all"
+              onClick={onClose}
+            >
+              <X size={18} />
+            </button>
+          </div>
         </div>
       </div>
 

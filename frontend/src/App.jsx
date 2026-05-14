@@ -12,7 +12,7 @@ import {
   formatTime 
 } from './utils/helpers';
 import { apiChatStream, apiChat, apiLogin, apiRegister, apiGetConversations, apiGetSessionHistory } from './utils/api';
-import { Search, Send, Paperclip, Mic, Globe, Moon, Sun, Trash2, Download, Menu, Sparkles, Settings, Volume2, VolumeX } from 'lucide-react';
+import { Search, Send, Paperclip, Mic, Globe, Moon, Sun, Trash2, Download, Menu, Sparkles, Settings, Volume2, VolumeX, Loader2 } from 'lucide-react';
 import ServicesHub from './components/ServicesHub';
 import ToolPanel from './components/ToolPanel';
 import KnowledgeBases from './components/KnowledgeBases';
@@ -27,7 +27,6 @@ import AuthScreen from './components/AuthScreen';
 import SwarmMode from './components/SwarmMode';
 import VaultMode from './components/VaultMode';
 import RagChat from './components/RagChat';
-import NexusBot from './components/NexusBot';
 import { createNotification } from './utils/notifications';
 import { MessageSquareText } from 'lucide-react';
 
@@ -72,7 +71,6 @@ const App = () => {
   const [searchResults, setSearchResults] = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [showBot, setShowBot] = useState(false);
 
   const [sidebarOverlay, setSidebarOverlay] = useState(false);
 
@@ -587,7 +585,7 @@ const App = () => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     placeholder={selectedKB ? `Query ${selectedKB.name}...` : "Neural Link Active..."}
-                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-sm sm:text-base font-bold placeholder:text-slate-600 outline-none px-3 py-3"
+                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-base sm:text-sm font-bold placeholder:text-slate-600 outline-none px-3 py-3"
                     disabled={isLoading}
                   />
                   <div className="flex items-center gap-2 pr-1">
@@ -598,11 +596,11 @@ const App = () => {
                       <Mic size={18} className={isRecordingVoice ? 'animate-bounce' : ''} />
                     </button>
                     <button 
-                      className="p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-xl shadow-indigo-500/20 hover:scale-105 active:scale-90 disabled:opacity-50 disabled:hover:scale-100 transition-all" 
-                      onClick={() => handleSend()} 
-                      disabled={isLoading || (!input.trim() && !selectedFile)}
+                      onClick={() => handleSend()}
+                      className={`p-2.5 sm:p-3.5 rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading ? 'opacity-50' : ''}`}
+                      disabled={isLoading}
                     >
-                      <Send size={18} strokeWidth={3} />
+                      {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
                     </button>
                   </div>
                 </div>
@@ -749,61 +747,63 @@ const App = () => {
         onShowNotifications={() => setShowNotifications(true)}
         unreadCount={unreadCount}
         setShowAnalytics={() => setShowAnalytics(true)}
+        onClose={() => setSidebarOpen(false)}
       />
+
+      {/* Sidebar Overlay (Mobile) */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[900] md:hidden animate-in fade-in duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
 
       <main className="main-content flex-1 relative overflow-hidden flex flex-col min-w-0">
         <header className="top-bar border-b border-white/5 bg-slate-900/40 backdrop-blur-3xl z-50 px-4 py-3 sm:px-10 sm:py-5 flex-shrink-0">
           <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto w-full">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
               <button 
                 className="p-2.5 rounded-xl bg-white/5 text-slate-300 md:hidden hover:text-indigo-400 transition-all active:scale-90" 
                 onClick={() => setSidebarOpen(!sidebarOpen)}
               >
-                <Menu size={24} />
+                <Menu size={20} />
               </button>
               <div className="flex flex-col">
-                <h2 className="text-sm sm:text-lg font-black tracking-tighter leading-none text-white">
-                  Welcome back, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{user?.username || 'Nexus Agent'}</span>
+                <h2 className="text-xs sm:text-base md:text-lg font-black tracking-tighter leading-none text-white whitespace-nowrap">
+                  Hello, <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">{user?.username || 'Nexus Agent'}</span>
                 </h2>
-                <span className="hidden xs:block text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1.5">
+                <span className="hidden sm:block text-[8px] md:text-[9px] font-black uppercase tracking-[0.3em] text-slate-500 mt-1.5">
                   Quantum Core Synchronized
                 </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3">
-              <div className="hidden xl:flex items-center bg-white/[0.03] border border-white/5 rounded-2xl px-4 py-2 focus-within:border-indigo-500/40 transition-all">
+            <div className="flex items-center gap-1.5 sm:gap-2">
+              <div className="hidden lg:flex items-center bg-white/[0.03] border border-white/5 rounded-2xl px-4 py-2 focus-within:border-indigo-500/40 transition-all">
                 <Search size={14} className="text-slate-500 mr-3" />
                 <input 
                   id="chat-search"
                   type="text" 
-                  placeholder="Deep Memory Search..." 
+                  placeholder="Memory Search..." 
                   value={searchQuery}
                   onChange={e => handleSearch(e.target.value)}
-                  className="bg-transparent text-slate-300 text-xs outline-none w-40 focus:w-64 transition-all font-bold placeholder:text-slate-700"
+                  className="bg-transparent text-slate-300 text-xs outline-none w-32 focus:w-48 transition-all font-bold placeholder:text-slate-700"
                 />
               </div>
               
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1 sm:gap-1.5">
                 <button 
                   onClick={() => setIsMuted(!isMuted)}
-                  className={`p-2.5 rounded-xl transition-all active:scale-90 ${isMuted ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`}
+                  className={`p-2 rounded-lg sm:p-2.5 sm:rounded-xl transition-all active:scale-90 ${isMuted ? 'bg-rose-500/20 text-rose-500' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`}
                   title={isMuted ? "Unmute" : "Mute"}
                 >
-                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                </button>
-                <button 
-                  onClick={() => setShowBot(!showBot)}
-                  className={`p-2.5 rounded-xl transition-all active:scale-90 ${showBot ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/30' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`}
-                  title="Nexus Assistant"
-                >
-                  <Sparkles size={18} />
+                  {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
                 </button>
                 <button 
                   onClick={() => setShowSettings(true)}
-                  className="p-2.5 rounded-xl bg-white/5 text-slate-400 hover:text-indigo-400 transition-all active:scale-90"
+                  className="p-2 rounded-lg sm:p-2.5 sm:rounded-xl bg-white/5 text-slate-400 hover:text-indigo-400 transition-all active:scale-90"
                 >
-                  <Settings size={18} />
+                  <Settings size={16} />
                 </button>
               </div>
             </div>
@@ -886,41 +886,7 @@ const App = () => {
         </div>
       )}
 
-      {/* Floating Bot Button (Quick Access) */}
-      {!showBot && (
-        <button 
-          onClick={() => setShowBot(true)}
-          style={{
-            position: 'fixed',
-            bottom: '30px',
-            right: '30px',
-            width: '56px',
-            height: '56px',
-            borderRadius: '18px',
-            background: 'var(--accent-gradient)',
-            color: 'white',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            boxShadow: '0 8px 32px rgba(99, 102, 241, 0.4)',
-            zIndex: 900,
-            cursor: 'pointer',
-            border: 'none',
-            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-          }}
-          className="hover:scale-110 active:scale-95"
-        >
-          <Sparkles size={24} className="animate-pulse" />
-
-        </button>
-      )}
-
       {/* Persistent Assistant Panel */}
-      <NexusBot 
-        settings={settings}
-        isOpen={showBot}
-        onClose={() => setShowBot(false)}
-      />
     </div>
 
   );
