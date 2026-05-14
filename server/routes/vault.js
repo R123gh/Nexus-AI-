@@ -1,7 +1,7 @@
 'use strict';
 const router = require('express').Router();
 const db = require('../db');
-const fetch = require('node-fetch');
+// fetch is global in Node 18+, no need for node-fetch
 
 // GET /api/vault/keys/:user_id
 router.get('/keys/:user_id', (req, res) => {
