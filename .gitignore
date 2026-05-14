@@ -32,3 +32,4 @@ Thumbs.db
 scratch/
 .tempmediaStorage/
 frontend-old/
+*.db*
