@@ -111,7 +111,7 @@ app.get('/*', (req, res) => {
 });
 
 // ─── Start ───────────────────────────────────────────────────────────────────
-const PORT = process.env.NODE_PORT || 5000;
+const PORT = process.env.PORT || process.env.NODE_PORT || 5000;
 httpServer.listen(PORT, '0.0.0.0', () => {
   console.log(`\n🚀 NexusAI Gateway active on http://127.0.0.1:${PORT}`);
   console.log(`   Python Microservice: http://127.0.0.1:5001`);

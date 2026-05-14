@@ -29,7 +29,7 @@ Render is great for hosting all three components.
 3. Root Directory: `.` (Project root)
 4. Runtime: `Node`
 5. Build Command: `npm run deploy:prepare`
-6. Start Command: `npm run start:server`
+6. Start Command: `node server/index.js`
 7. **Environment Variables**:
    - `PYTHON_BASE`: Paste your Python service URL from step 1.
    - `NODE_ENV`: `production`
