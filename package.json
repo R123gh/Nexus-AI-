@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "NexusAI Full Stack Orchestration",
   "scripts": {
-    "install:all": "npm install && cd frontend && npm install && cd ../server && npm install && cd ../backend && pip install -r requirements.txt",
+    "install:all": "npm install && cd frontend && npm install && cd ../server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt",
     "build:frontend": "cd frontend && npm run build",
     "start:server": "cd server && npm start",
     "start:python": "cd backend && python app.py",
     "start": "concurrently \"npm run start:server\" \"npm run start:python\"",
-    "deploy:prepare": "npm run install:all && npm run build:frontend"
+    "deploy:prepare": "npm install && npm run build:frontend && cd server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"

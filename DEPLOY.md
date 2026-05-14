@@ -18,8 +18,8 @@ Render is great for hosting all three components.
 2. Connect your GitHub repository.
 3. Root Directory: `backend`
 4. Runtime: `Python`
-5. Build Command: `pip install -r requirements.txt`
-6. Start Command: `gunicorn --worker-class gevent -w 1 app:app` (or `python app.py`)
+5. Build Command: `pip install --break-system-packages -r requirements.txt`
+6. Start Command: `gunicorn --worker-class gevent -w 1 app:app`
 7. **Environment Variables**: Add your `GROQ_API_KEY`, `MONGO_URI`, etc.
 8. Copy the provided URL (e.g., `https://nexus-python.onrender.com`).
 
@@ -76,7 +76,8 @@ Ensure these are set in your deployment platform:
 - `JWT_SECRET`: A secure random string for authentication.
 
 ### 🚩 Common Fixes
-- **ModuleNotFoundError (eventlet/gunicorn)**: Ensure these are in `backend/requirements.txt` (I have added them for you).
+- **PEP 668 (Externally Managed Environment)**: If you see a `pip` error about "managed environments", ensure you are using the `--break-system-packages` flag in your build command (I have updated `package.json` to handle this).
+- **ModuleNotFoundError (eventlet/gunicorn)**: Ensure these are in `backend/requirements.txt`.
 - **CORS Errors**: Check that `PYTHON_BASE` in the Node service doesn't have a trailing slash.
 - **Port Binding**: Render expects the service to listen on `0.0.0.0`.
 
