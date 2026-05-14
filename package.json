@@ -8,7 +8,7 @@
     "start:server": "cd server && npm start",
     "start:python": "cd backend && python app.py",
     "start": "concurrently \"npm run start:server\" \"npm run start:python\"",
-    "deploy:prepare": "npm install && npm run build:frontend && cd server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt"
+    "deploy:prepare": "npm install && cd frontend && npm install && npm run build && cd ../server && npm install && cd ../backend && pip install --break-system-packages -r requirements.txt"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
