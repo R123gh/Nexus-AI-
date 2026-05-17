@@ -77,11 +77,9 @@ def delete_kb_file(kb_id):
 
 @rag_bp.route('/<kb_id>/chunks', methods=['GET'])
 def list_chunks(kb_id):
-    kbs = get_kbs()
-    kb = next((k for k in kbs if k['id'] == kb_id), None)
-    if not kb:
-        return jsonify({'error': 'Knowledge Base not found'}), 404
-    return jsonify(kb.get('chunks', [])), 200
+    from services.rag_engine import get_all_chunks
+    chunks = get_all_chunks(kb_id)
+    return jsonify(chunks), 200
 
 @rag_bp.route('/<kb_id>/chat', methods=['POST'])
 def chat_kb(kb_id):
@@ -130,15 +128,15 @@ def chat_kb(kb_id):
 
     # Constructing the Grounded Prompt (Step 4 continued)
     sys_prompt = (
-        "ROLE: You are the NexusAI Contextual Intelligence Engine. Your mission is to provide accurate, grounded answers.\n\n"
+        "ROLE: You are the NexusAI Contextual Intelligence Engine. Your mission is to provide highly accurate, grounded, and comprehensive answers.\n\n"
         "INSTRUCTIONS:\n"
-        "1. Use the LOCAL KNOWLEDGE BASE CONTEXT below as your primary source of truth.\n"
-        "2. If the answer is present, synthesize it and CITE the source filename.\n"
-        "3. If the context is insufficient, state that the information is not in the knowledge base.\n\n"
+        "1. If the LOCAL KNOWLEDGE BASE CONTEXT below contains relevant information, prioritize it and use it as your primary source of truth. Always CITE the source filename (e.g. [Source: file.txt]).\n"
+        "2. If the LOCAL KNOWLEDGE BASE CONTEXT is empty, insufficient, or does not contain the answer to the user's question, leverage your broad, expert general knowledge to fully and professionally answer the user query in detail.\n"
+        "3. Be extremely helpful, clear, and include code snippets or lists where relevant. If answering from general knowledge due to empty local context, state this clearly to the user.\n\n"
         f"--- LOCAL KNOWLEDGE BASE CONTEXT (Retrieved Documents) ---\n{context_text if context_text else 'NO RELEVANT LOCAL CONTEXT FOUND.'}\n\n"
         f"--- LIVE WEB SEARCH CONTEXT ---\n{web_context if web_context else 'WEB SEARCH DISABLED.'}\n\n"
         "--- FINAL TASK ---\n"
-        "Answer the user query based ONLY on the provided context. Be professional and accurate."
+        "Answer the user query professionally, accurately, and thoroughly."
     )
     
     messages = [

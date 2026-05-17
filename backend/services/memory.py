@@ -12,6 +12,10 @@ from config import MAX_HISTORY_PER_SESSION, MONGO_URI
 from datetime import datetime
 from pymongo import MongoClient
 
+mongo_db = None
+mongo_users = None
+mongo_messages = None
+
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'nexus_memory.db')
 
 try:
@@ -22,14 +26,15 @@ try:
         mongo_users = mongo_db['users']
         # Create a unique index for username
         mongo_users.create_index('username', unique=True)
+        
+        mongo_messages = mongo_db['messages']
+        mongo_messages.create_index([('session_id', 1), ('timestamp', 1)])
+        mongo_messages.create_index('user_id')
+        
         print(f"Successfully connected to MongoDB Atlas: {mongo_db.name}")
     else:
-        mongo_db = None
-        mongo_users = None
         print("Warning: MONGO_URI not provided. Falling back to SQLite for Auth.")
 except Exception as e:
-    mongo_db = None
-    mongo_users = None
     print(f"MongoDB connection failed: {e}. Falling back to SQLite.")
 
 
@@ -395,7 +400,25 @@ class ConversationMemory:
 
     # ─── Message Methods ───────────────────────────────────────────
     def add_message(self, session_id, role, content, user_id=None):
-        """Add a message to a session's history."""
+        """Add a message to a session's history with MongoDB Atlas cloud sync."""
+        try:
+            if user_id is not None:
+                user_id = int(user_id)
+        except:
+            pass
+
+        if mongo_messages is not None:
+            try:
+                mongo_messages.insert_one({
+                    'user_id': user_id,
+                    'session_id': session_id,
+                    'role': role,
+                    'content': content,
+                    'timestamp': time.time()
+                })
+            except Exception as e:
+                print(f"MongoDB write failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 conn.execute(
@@ -423,6 +446,16 @@ class ConversationMemory:
 
     def get_history(self, session_id, limit=None):
         """Get conversation history for a session."""
+        if mongo_messages is not None:
+            try:
+                cursor = mongo_messages.find({"session_id": session_id}).sort("timestamp", 1)
+                messages = [{'role': doc.get('role'), 'content': doc.get('content')} for doc in cursor]
+                if limit:
+                    messages = messages[-limit:]
+                return messages
+            except Exception as e:
+                print(f"MongoDB get history failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 cursor = conn.cursor()
@@ -435,6 +468,22 @@ class ConversationMemory:
 
     def get_user_history(self, user_id, limit=None):
         """Get all conversation history for a user."""
+        try:
+            if user_id is not None:
+                user_id = int(user_id)
+        except:
+            pass
+
+        if mongo_messages is not None:
+            try:
+                cursor = mongo_messages.find({"user_id": user_id}).sort("timestamp", 1)
+                messages = [{'role': doc.get('role'), 'content': doc.get('content')} for doc in cursor]
+                if limit:
+                    messages = messages[-limit:]
+                return messages
+            except Exception as e:
+                print(f"MongoDB get user history failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 cursor = conn.cursor()
@@ -446,7 +495,40 @@ class ConversationMemory:
                 return messages
 
     def get_user_conversations(self, user_id):
-        """Get all sessions for a user with title and timestamp."""
+        """Get all sessions for a user with title and timestamp from MongoDB Atlas."""
+        try:
+            if user_id is not None:
+                user_id = int(user_id)
+        except:
+            pass
+
+        if mongo_messages is not None:
+            try:
+                pipeline = [
+                    {"$match": {"user_id": user_id, "role": "user"}},
+                    {"$sort": {"timestamp": -1}},
+                    {"$group": {
+                        "_id": "$session_id",
+                        "content": {"$first": "$content"},
+                        "last_updated": {"$first": "$timestamp"}
+                    }},
+                    {"$sort": {"last_updated": -1}}
+                ]
+                results = list(mongo_messages.aggregate(pipeline))
+                conversations = []
+                for row in results:
+                    sid = row["_id"]
+                    content = row.get("content", "")
+                    title = content[:40] + ('...' if len(content) > 40 else '')
+                    conversations.append({
+                        'session_id': sid,
+                        'title': title,
+                        'updated_at': row.get("last_updated")
+                    })
+                return conversations
+            except Exception as e:
+                print(f"MongoDB get user conversations failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 cursor = conn.cursor()
@@ -462,6 +544,13 @@ class ConversationMemory:
 
     def get_session_history(self, session_id):
         """Get full conversation history for a specific session."""
+        if mongo_messages is not None:
+            try:
+                cursor = mongo_messages.find({"session_id": session_id}).sort("timestamp", 1)
+                return [{'role': doc.get('role'), 'content': doc.get('content'), 'timestamp': doc.get('timestamp')} for doc in cursor]
+            except Exception as e:
+                print(f"MongoDB get session history failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 cursor = conn.cursor()
@@ -470,6 +559,13 @@ class ConversationMemory:
                 return [{'role': row[0], 'content': row[1], 'timestamp': row[2]} for row in cursor.fetchall()]
 
     def clear_session(self, session_id):
+        """Clear all messages in a session."""
+        if mongo_messages is not None:
+            try:
+                mongo_messages.delete_many({"session_id": session_id})
+            except Exception as e:
+                print(f"MongoDB delete session failed: {e}. Falling back to SQLite.")
+
         with self._lock:
             with self._get_conn() as conn:
                 conn.execute('DELETE FROM messages WHERE session_id = ?', (session_id,))

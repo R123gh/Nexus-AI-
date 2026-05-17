@@ -314,6 +314,15 @@ def get_session_history(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@chat_bp.route('/session/<session_id>', methods=['DELETE'])
+def delete_session(session_id):
+    """Delete all messages for a specific session."""
+    try:
+        memory.clear_session(session_id)
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # ─── Feature: Streaming Responses (SSE) ──────────────────────
 @chat_bp.route('/chat/stream', methods=['POST'])

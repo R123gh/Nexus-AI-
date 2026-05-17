@@ -249,3 +249,38 @@ def execute_code():
                     os.remove(f_path)
                 except:
                     pass
+
+@code_bp.route('/terminal', methods=['POST'])
+def run_terminal_command():
+    data = request.json
+    command = data.get('command')
+    if not command:
+        return jsonify({'error': 'No command provided'}), 400
+        
+    try:
+        # Run arbitrary shell command inside WORKSPACE_DIR
+        proc = subprocess.run(
+            command,
+            shell=True,
+            cwd=WORKSPACE_DIR,
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+        combined = ""
+        if proc.stdout:
+            combined += proc.stdout
+        if proc.stderr:
+            combined += proc.stderr
+            
+        if not combined:
+            combined = f"Command exited with code {proc.returncode}"
+            
+        return jsonify({
+            'output': combined,
+            'exit_code': proc.returncode
+        })
+    except subprocess.TimeoutExpired:
+        return jsonify({'error': 'Command timeout expired.'}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

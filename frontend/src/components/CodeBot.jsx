@@ -4,7 +4,7 @@ import {
   Copy, Save, ArrowRight, Loader2, X, Activity, 
   Bug, Zap, Layers, RefreshCcw, User
 } from 'lucide-react';
-import { apiChatStream } from '../utils/api';
+import { apiChatStream, apiGetFiles, apiGetFileContent } from '../utils/api';
 import { marked } from 'marked';
 
 const CodeBot = ({ settings, user }) => {
@@ -17,6 +17,8 @@ const CodeBot = ({ settings, user }) => {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('chat'); // chat, debugging, architecture
+  const [workspaceFiles, setWorkspaceFiles] = useState([]);
+  const [showFileSelector, setShowFileSelector] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -24,6 +26,37 @@ const CodeBot = ({ settings, user }) => {
       scrollRef.current.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
     }
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    const fetchWorkspaceFiles = async () => {
+      try {
+        const list = await apiGetFiles();
+        setWorkspaceFiles(list || []);
+      } catch (err) {
+        console.error("Failed to load workspace files", err);
+      }
+    };
+    fetchWorkspaceFiles();
+  }, []);
+
+  const handleIncludeFile = async (file) => {
+    try {
+      setShowFileSelector(false);
+      setIsLoading(true);
+      const res = await apiGetFileContent(file.path);
+      const fileCode = res.content || '';
+      const extension = file.name.split('.').pop() || 'txt';
+      
+      setInput(prev => {
+        const separator = prev ? '\n\n' : '';
+        return prev + separator + `Existing code in [${file.name}]:\n\`\`\`${extension}\n${fileCode}\n\`\`\``;
+      });
+    } catch (err) {
+      console.error("Failed to fetch file content", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleSend = async (e) => {
     if (e) e.preventDefault();
@@ -150,9 +183,19 @@ const CodeBot = ({ settings, user }) => {
                 max-w-[95%] md:max-w-[85%] p-6 md:p-8 rounded-3xl border shadow-2xl transition-all
                 ${msg.role === 'user' ? 'bg-[var(--accent)] border-transparent text-white rounded-br-none shadow-indigo-500/20' : 'bg-[var(--bg-2)] border-[var(--border-subtle)] text-[var(--text-1)] rounded-bl-none'}
               `}>
-                <div className={`text-[10px] font-black uppercase tracking-[0.3em] mb-4 flex items-center gap-2 ${msg.role === 'user' ? 'text-indigo-100' : 'text-[var(--accent)]'}`}>
-                  {msg.role === 'user' ? <User size={12} /> : <Zap size={12} />}
-                  {msg.role}
+                <div className={`text-[10px] font-black uppercase tracking-[0.3em] mb-4 flex items-center justify-between gap-2 w-full ${msg.role === 'user' ? 'text-indigo-100' : 'text-[var(--accent)]'}`}>
+                  <div className="flex items-center gap-2">
+                    {msg.role === 'user' ? <User size={12} /> : <Zap size={12} />}
+                    {msg.role}
+                  </div>
+                  <button 
+                    onClick={() => navigator.clipboard.writeText(msg.content)}
+                    type="button"
+                    className="p-1.5 hover:bg-white/10 rounded-lg text-slate-400 hover:text-slate-200 transition-all active:scale-95"
+                    title="Copy message"
+                  >
+                    <Copy size={12} />
+                  </button>
                 </div>
                 <MessageContent content={msg.content} />
               </div>
@@ -173,12 +216,48 @@ const CodeBot = ({ settings, user }) => {
           <form onSubmit={handleSend} className="group relative">
             <div className="absolute -inset-1 bg-[var(--accent)] rounded-3xl blur opacity-10 group-focus-within:opacity-25 transition-opacity" />
             <div className="relative flex items-center gap-4 p-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-3xl focus-within:border-[var(--accent)] transition-all shadow-2xl">
+              {/* Attachment Button */}
+              <div className="relative">
+                <button 
+                  type="button"
+                  onClick={() => setShowFileSelector(!showFileSelector)}
+                  className="p-3 bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] rounded-2xl transition-all flex items-center justify-center ml-2"
+                  title="Include workspace file code"
+                >
+                  <Code size={20} />
+                </button>
+                
+                {showFileSelector && (
+                  <div className="absolute bottom-full left-0 mb-3 w-64 bg-[var(--bg-2)] backdrop-blur-2xl border border-[var(--border-subtle)] rounded-2xl shadow-2xl overflow-hidden z-[100] animate-in slide-in-from-bottom-2 duration-300">
+                    <div className="px-4 py-3 bg-[var(--bg-1)] border-b border-[var(--border-subtle)] flex items-center justify-between">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-[var(--text-2)]">Workspace Files</span>
+                      <button type="button" onClick={() => setShowFileSelector(false)} className="text-[var(--text-2)] hover:text-rose-500"><X size={12} /></button>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar p-2 space-y-1">
+                      {workspaceFiles.map(f => (
+                        <button 
+                          key={f.path}
+                          type="button"
+                          onClick={() => handleIncludeFile(f)}
+                          className="w-full text-left px-3 py-2 text-xs rounded-xl hover:bg-[var(--bg-hover)] hover:text-[var(--accent)] transition-all flex items-center gap-2 truncate text-[var(--text-1)] font-medium"
+                        >
+                          <Terminal size={14} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{f.name}</span>
+                        </button>
+                      ))}
+                      {workspaceFiles.length === 0 && (
+                        <div className="text-[10px] font-bold text-center text-slate-500 py-4 uppercase">No files in workspace</div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <input 
                 type="text" 
                 value={input}
                 onChange={e => setInput(e.target.value)}
                 placeholder="Share your architectural challenge..."
-                className="flex-1 bg-transparent border-none text-[var(--text-0)] text-sm md:text-base font-bold px-6 py-4 placeholder:text-[var(--text-2)] outline-none"
+                className="flex-1 bg-transparent border-none text-[var(--text-0)] text-sm md:text-base font-bold px-4 py-4 placeholder:text-[var(--text-2)] outline-none"
               />
               <button 
                 type="submit"

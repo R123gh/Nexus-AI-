@@ -281,6 +281,24 @@ const App = () => {
     }
   };
 
+  const handleDeleteConversation = async (conversationId) => {
+    try {
+      const { apiDeleteSession } = await import('./utils/api');
+      await apiDeleteSession(conversationId);
+      showToast('Conversation history deleted.', 'warning');
+      
+      // If the currently open session was deleted, reset chat screen
+      if (sessionId === conversationId) {
+        handleNewChat();
+      }
+      
+      loadConversations();
+    } catch (err) {
+      console.error("Failed to delete conversation:", err);
+      showToast('Purge failed.', 'error');
+    }
+  };
+
   const handleBranch = (msg) => {
     const idx = messages.indexOf(msg);
     if (idx !== -1) {
@@ -558,13 +576,13 @@ const App = () => {
                         setSettings(newSettings);
                         localStorage.setItem('nexusai_settings', JSON.stringify(newSettings));
                       }}
-                      className="w-full sm:w-auto bg-white/5 border border-white/10 text-slate-300 text-[10px] sm:text-[11px] px-3 py-2.5 rounded-xl outline-none focus:border-indigo-500/40 transition-all font-black uppercase tracking-widest"
+                      className="w-full sm:w-auto bg-[var(--bg-1)] border border-[var(--border-default)] text-[var(--text-0)] text-[10px] sm:text-[11px] px-3 py-2.5 rounded-xl outline-none focus:border-[var(--accent)] transition-all font-black uppercase tracking-widest shadow-sm"
                     >
-                      {MODELS.map(m => <option key={m.id} value={m.id} className="bg-slate-900">{m.name}</option>)}
+                      {MODELS.map(m => <option key={m.id} value={m.id} className="bg-[var(--bg-2)] text-[var(--text-0)]">{m.name}</option>)}
                     </select>
                   </div>
                   <div className="flex items-center justify-center gap-6">
-                    <label className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-slate-400 cursor-pointer hover:text-indigo-400 transition-colors font-black uppercase tracking-widest group">
+                    <label className="flex items-center gap-2.5 text-[10px] sm:text-[11px] text-[var(--text-2)] cursor-pointer hover:text-[var(--accent)] transition-colors font-black uppercase tracking-widest group">
                       <input 
                         type="checkbox" 
                         checked={!settings.simple_chat} 
@@ -573,31 +591,31 @@ const App = () => {
                           setSettings(newSettings);
                           localStorage.setItem('nexusai_settings', JSON.stringify(newSettings));
                         }}
-                        className="w-3.5 h-3.5 rounded border-white/20 bg-transparent text-indigo-500 focus:ring-indigo-500/20 transition-all cursor-pointer"
+                        className="w-3.5 h-3.5 rounded border-[var(--border-default)] bg-transparent text-[var(--accent)] focus:ring-[var(--accent)]/20 transition-all cursor-pointer"
                       />
                       <span>Agent Mode</span>
                     </label>
                   </div>
                 </div>
-                <div className={`flex items-center gap-2 sm:gap-3 p-1.5 sm:p-2 bg-[var(--bg-hover)] border rounded-[1.5rem] sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
-                  isDragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-[var(--border-default)] focus-within:border-indigo-500/40'
+                <div className={`flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 bg-[var(--bg-input)] border rounded-2xl sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
+                  isDragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-[var(--border-default)] focus-within:border-[var(--accent)]/40'
                 }`}
                   onDragOver={handleDragOver}
                   onDragLeave={handleDragLeave}
                   onDrop={handleDrop}
                 >
                   {/* Mobile Action Group (Left) */}
-                  <div className="flex sm:hidden items-center gap-1 ml-1">
-                    <button className="p-2 rounded-xl text-slate-400 active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
-                      <Paperclip size={18} />
+                  <div className="flex sm:hidden items-center gap-0.5 ml-1">
+                    <button className="p-2 rounded-xl text-[var(--text-2)] hover:text-[var(--accent)] active:scale-90 transition-all" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                      <Paperclip size={16} />
                     </button>
-                    <button className={`p-2 rounded-xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'text-slate-400'}`} onClick={startVoiceDictation} disabled={isLoading}>
-                      <Mic size={18} />
+                    <button className={`p-2 rounded-xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                      <Mic size={16} />
                     </button>
                   </div>
 
                   {/* Desktop Attachment (Left) */}
-                  <button className="hidden sm:flex p-3 rounded-2xl bg-white/5 text-slate-400 hover:text-indigo-400 transition-all active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                  <button className="hidden sm:flex p-3 rounded-2xl bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] transition-all active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
                     <Paperclip size={20} />
                   </button>
 
@@ -607,22 +625,22 @@ const App = () => {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     placeholder={selectedKB ? `Query ${selectedKB.name}...` : "Neural Link Active..."}
-                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-sm sm:text-sm font-bold placeholder:text-slate-600 outline-none px-2 py-2"
+                    className="flex-1 bg-transparent border-none text-[var(--text-0)] text-xs sm:text-sm font-bold placeholder:text-[var(--text-2)] outline-none px-2 py-2"
                     disabled={isLoading}
                   />
 
                   <div className="flex items-center gap-1 sm:gap-2 pr-1">
                     {/* Desktop Voice (Right) */}
-                    <button className={`hidden sm:flex p-3 rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-white/5 text-slate-400 hover:text-indigo-400'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                    <button className={`hidden sm:flex p-3 rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
                       <Mic size={20} className={isRecordingVoice ? 'animate-bounce' : ''} />
                     </button>
                     
                     <button 
                       onClick={() => handleSend()}
-                      className={`p-2.5 sm:p-3 rounded-xl sm:rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading || !input.trim() ? 'opacity-50 grayscale' : ''}`}
+                      className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading || !input.trim() ? 'opacity-50 grayscale' : ''}`}
                       disabled={isLoading || !input.trim()}
                     >
-                      {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Send size={18} />}
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
                 </div>
@@ -633,7 +651,7 @@ const App = () => {
                       <button 
                         key={i}
                         onClick={() => setInput(s)}
-                        className="whitespace-nowrap px-4 py-2 bg-white/5 hover:bg-indigo-500/10 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-indigo-400 transition-all active:scale-95"
+                        className="whitespace-nowrap px-4 py-2 bg-[var(--bg-hover)] hover:bg-[var(--accent)] hover:text-white border border-[var(--border-subtle)] rounded-full text-[10px] font-black uppercase tracking-widest text-[var(--text-1)] transition-all active:scale-95 shadow-sm"
                       >
                         {s}
                       </button>
@@ -777,6 +795,7 @@ const App = () => {
         unreadCount={unreadCount}
         setShowAnalytics={() => setShowAnalytics(true)}
         onClose={() => setSidebarOpen(false)}
+        onDeleteConversation={handleDeleteConversation}
       />
 
       {/* Sidebar Overlay (Mobile) */}

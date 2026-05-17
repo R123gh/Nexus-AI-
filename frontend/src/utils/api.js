@@ -162,6 +162,15 @@ export const apiGetSessionHistory = async (sessionId) => {
     return data.history || [];
 };
 
+export const apiDeleteSession = async (sessionId) => {
+    const res = await fetch(`${API_BASE}/session/${sessionId}`, {
+        method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete session');
+    return data;
+};
+
 export const apiTool = async (toolId, payload, settings) => {
     let body;
     const headers = getHeaders(settings);
@@ -407,6 +416,15 @@ export const apiRunCode = async (path) => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path })
+    });
+    return await res.json();
+};
+
+export const apiTerminalCommand = async (command) => {
+    const res = await fetch(`${API_BASE}/code/terminal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ command })
     });
     return await res.json();
 };

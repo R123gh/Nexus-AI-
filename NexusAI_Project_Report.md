@@ -85,7 +85,31 @@ NexusAI is built to be a **Pro-Grade AI Operating System**, not just a wrapper.
 
 ---
 
-## 5. Technology Stack Summary
+## 5. Process Models Used with Justification
+
+To ensure the successful delivery of a complex, multi-service platform like NexusAI, a combination of modern software development methodologies was employed. These models were selected to balance rapid innovation with system stability.
+
+### 🔄 5.1. Iterative and Incremental Model (Agile)
+*   **Justification**: NexusAI is a feature-rich platform where many components (like the Intelligence Tier and Orchestration Tier) are deeply interdependent. An iterative approach allowed the team to:
+    *   Develop and test core features (Chat, Auth) before layering complex modules (RAG, AutoML).
+    *   Incorporate real-time debugging insights and performance metrics at each stage (e.g., refining SSE streaming and backend proxying).
+    *   Minimize risk by ensuring a stable "Golden Path" existed before expanding into experimental features.
+
+### 🧪 5.2. Evolutionary Prototyping Model
+*   **Justification**: Given the experimental nature of AI-driven features—such as **Autonomous Code Injection** and **Swarm Mode**—this model was crucial.
+    *   **Neural Link Validation**: Initial logic for cross-service communication was prototyped as a proof-of-concept before being hardened for production.
+    *   **UI/UX Refinement**: The "Glassmorphic" interface went through multiple visual iterations to ensure premium aesthetics without sacrificing performance.
+    *   **Risk Mitigation**: Prototyping allowed us to pivot or refine AI prompts and RAG retrieval strategies without rebuilding core infrastructure.
+
+### 🚀 5.3. DevOps & CI/CD Lifecycle
+*   **Justification**: With the system deployed on cloud infrastructure (Render) and utilizing a hybrid tech stack, a DevOps-centric model was essential.
+    *   **Seamless Deployment**: Automated build pipelines ensure that changes in the Python microservice and Node.js gateway are deployed in sync.
+    *   **Environment Stability**: Strictly managing runtimes (Python 3.11, Node 18+) across development and production environments prevents "it works on my machine" syndromes.
+    *   **Continuous Optimization**: Post-deployment monitoring allows for real-time adjustments to AI model parameters and server resources.
+
+---
+
+## 6. Technology Stack Summary
 
 | Layer | Technologies |
 | :--- | :--- |
@@ -96,5 +120,5 @@ NexusAI is built to be a **Pro-Grade AI Operating System**, not just a wrapper.
 
 ---
 
-## 6. Conclusion
+## 7. Conclusion
 NexusAI represents the future of AI interaction. By unifying chat, development, and data science into a single, high-performance platform, it empowers users to transform ideas into reality faster than ever before.

@@ -147,9 +147,17 @@ def retrieve_chunks(kb_id, query, top_k=5, threshold=None):
     """
     CORE RAG STEP 2 & 3: Convert query to embeddings and retrieve relevant documents.
     """
+    # Performance Optimization: Bypass Vector DB queries if KB is empty to save ~8+ seconds of load time
+    kbs = get_kbs()
+    kb = next((k for k in kbs if k['id'] == kb_id), None)
+    if not kb or not kb.get('files'):
+        return []
+
     try:
         collection = get_kb_collection(kb_id)
-        
+        if collection.count() == 0:
+            return []
+            
         # Step 2 & 3: Embed query and search Vector DB
         results = collection.query(
             query_texts=[query],
@@ -176,3 +184,24 @@ def retrieve_chunks(kb_id, query, top_k=5, threshold=None):
         return formatted_results
     except Exception as e:
         return []
+
+def get_all_chunks(kb_id):
+    """Retrieve all chunks stored in ChromaDB for a specific KB."""
+    try:
+        collection = get_kb_collection(kb_id)
+        results = collection.get()
+        
+        docs = results.get('documents', [])
+        metas = results.get('metadatas', [])
+        
+        formatted_chunks = []
+        for i in range(len(docs)):
+            formatted_chunks.append({
+                'text': docs[i],
+                'source': metas[i].get('source', 'Unknown') if i < len(metas) and metas[i] else 'Unknown'
+            })
+        return formatted_chunks
+    except Exception as e:
+        print(f"Error fetching chunks from Chroma: {e}")
+        return []
+

@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { 
   apiGetFiles, apiGetFileContent, apiSaveFile, apiRunCode, 
-  apiGetPackages, apiInstallPackage, apiChatStream
+  apiGetPackages, apiInstallPackage, apiChatStream, apiTerminalCommand
 } from '../utils/api';
 import { marked } from 'marked';
 
@@ -31,6 +31,8 @@ const CodeWorkspace = ({ user, settings }) => {
   const [sidebarTab, setSidebarTab] = useState('explorer'); 
   const [showExplorer, setShowExplorer] = useState(window.innerWidth > 1024);
   const [showTerminal, setShowTerminal] = useState(true);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [terminalLoading, setTerminalLoading] = useState(false);
   
   const [showSnippets, setShowSnippets] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -226,6 +228,27 @@ const CodeWorkspace = ({ user, settings }) => {
     }
   };
 
+  const handleTerminalSubmit = async (e) => {
+    if (e.key === 'Enter' && terminalInput.trim()) {
+      const cmd = terminalInput.trim();
+      setTerminalInput('');
+      setTerminalLoading(true);
+      setOutput(prev => prev + `\n$ ${cmd}\n`);
+      try {
+        const res = await apiTerminalCommand(cmd);
+        if (res.error) {
+          setOutput(prev => prev + `⚠️ Error: ${res.error}\n`);
+        } else {
+          setOutput(prev => prev + (res.output || '') + '\n');
+        }
+      } catch (err) {
+        setOutput(prev => prev + `⚠️ Sync Error: ${err.message}\n`);
+      } finally {
+        setTerminalLoading(false);
+      }
+    }
+  };
+
   const handleAiChat = async (e) => {
     if (e.key === 'Enter' && aiInput.trim()) {
       const userMsg = aiInput.trim();
@@ -291,9 +314,10 @@ const CodeWorkspace = ({ user, settings }) => {
           </div>
         </div>
         
-        <div className="flex border-b border-[var(--border-subtle)]">
+        <div className="flex border-b border-[var(--border-subtle)] overflow-x-auto no-scrollbar">
           {[
             { id: 'explorer', label: 'Files', icon: Folder },
+            { id: 'codebot', label: 'CodeBot', icon: Sparkles },
             { id: 'packages', label: 'Deps', icon: Package },
             { id: 'snippets', label: 'Snips', icon: Code },
             { id: 'history', label: 'History', icon: Clock }
@@ -301,7 +325,7 @@ const CodeWorkspace = ({ user, settings }) => {
             <button 
               key={tab.id}
               onClick={() => setSidebarTab(tab.id)}
-              className={`flex-1 py-3 flex flex-col items-center gap-1 text-[8px] font-black uppercase tracking-widest transition-all ${sidebarTab === tab.id ? 'text-[var(--accent)] border-b-2 border-[var(--accent)] bg-[var(--accent)]/5' : 'text-[var(--text-2)] hover:text-[var(--text-0)]'}`}
+              className={`flex-1 min-w-[56px] py-3 flex flex-col items-center gap-1 text-[8px] font-black uppercase tracking-widest transition-all ${sidebarTab === tab.id ? 'text-[var(--accent)] border-b-2 border-[var(--accent)] bg-[var(--accent)]/5' : 'text-[var(--text-2)] hover:text-[var(--text-0)]'}`}
             >
               <tab.icon size={12} />
               {tab.label}
@@ -309,7 +333,84 @@ const CodeWorkspace = ({ user, settings }) => {
           ))}
         </div>
 
-        <div className="flex-1 overflow-y-auto custom-scrollbar p-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-4 flex flex-col">
+          {sidebarTab === 'codebot' && (
+            <div className="flex flex-col flex-1 h-full space-y-4">
+              <div className="px-2 pb-2 border-b border-[var(--border-subtle)]/30 flex items-center justify-between">
+                <span className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest flex items-center gap-1.5">
+                  <Sparkles size={12} className="text-[var(--accent)] animate-pulse" /> CodeBot AI
+                </span>
+                <span className="text-[8px] font-black text-[var(--accent)] uppercase bg-[var(--accent)]/10 px-1.5 py-0.5 rounded">Synced</span>
+              </div>
+              
+              {/* Mini chat feed */}
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 max-h-[350px] custom-scrollbar flex flex-col">
+                {aiChat.map((m, i) => (
+                  <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
+                    <div className={`p-3 rounded-xl border text-xs max-w-[95%] ${m.role === 'user' ? 'bg-[var(--accent)] border-transparent text-white' : 'bg-[var(--bg-2)] border-[var(--border-subtle)] text-[var(--text-1)]'}`}>
+                      <div className="text-[8px] font-black uppercase opacity-60 mb-2 flex items-center justify-between gap-2">
+                        <span>{m.role}</span>
+                        <button 
+                          onClick={() => navigator.clipboard.writeText(m.content)}
+                          className="p-1 hover:bg-white/10 rounded text-[8px] transition-all opacity-60 hover:opacity-100"
+                          title="Copy message"
+                        >
+                          <Copy size={10} />
+                        </button>
+                      </div>
+                      <p className="whitespace-pre-wrap leading-relaxed">{m.content}</p>
+                    </div>
+                  </div>
+                ))}
+                {aiLoading && (
+                  <div className="flex items-center gap-2 p-2.5 bg-[var(--bg-hover)] border border-[var(--border-subtle)] rounded-xl w-fit animate-pulse">
+                    <Loader2 size={12} className="animate-spin text-[var(--accent)]" />
+                    <span className="text-[9px] font-black text-[var(--text-2)] uppercase tracking-widest italic">Thinking...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="pt-2 border-t border-[var(--border-subtle)]/30">
+                <div className="flex gap-1.5 p-1 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-xl focus-within:border-[var(--accent)] transition-all items-center">
+                  {activeFile && (
+                    <button 
+                      onClick={() => {
+                        const fileName = activeFile.split(/[/\\]/).pop();
+                        const fileContent = fileContents[activeFile] || '';
+                        const extension = fileName.split('.').pop() || 'txt';
+                        setAiInput(prev => {
+                          const separator = prev ? '\n\n' : '';
+                          return prev + separator + `Existing code in [${fileName}]:\n\`\`\`${extension}\n${fileContent}\n\`\`\``;
+                        });
+                      }}
+                      type="button"
+                      className="p-1.5 bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] rounded-lg transition-all flex items-center justify-center shrink-0"
+                      title="Include active file code"
+                    >
+                      <FileCode size={12} />
+                    </button>
+                  )}
+                  <input 
+                    type="text" 
+                    value={aiInput}
+                    onChange={e => setAiInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleAiChat(e)}
+                    placeholder="Ask CodeBot..."
+                    className="flex-1 bg-transparent border-none outline-none text-xs font-bold px-2 py-1.5 text-[var(--text-0)]"
+                  />
+                  <button 
+                    onClick={() => handleAiChat({ key: 'Enter' })}
+                    disabled={aiLoading || !aiInput.trim()}
+                    className="p-2 bg-[var(--accent)] text-white rounded-lg flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md disabled:opacity-50 shrink-0"
+                  >
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
           {sidebarTab === 'explorer' && (
             <div className="space-y-1">
               {isCreatingFile && (
@@ -434,8 +535,22 @@ const CodeWorkspace = ({ user, settings }) => {
             >
               <Users size={14} /> <span>{collabMode ? 'Collab Active' : 'Go Live'}</span>
             </button>
-            <button className="p-2.5 bg-[var(--bg-hover)] text-[var(--text-2)] rounded-xl hover:text-[var(--accent)] lg:hidden" onClick={() => setShowAi(!showAi)}>
-              <Cpu size={18} />
+            
+            {collabMode && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 font-mono text-[9px] font-black tracking-widest uppercase animate-pulse">
+                <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-[9px]">
+                  {(user?.username || 'R')[0].toUpperCase()}
+                </div>
+                <span>{user?.username || 'raghav'} (LIVE)</span>
+              </div>
+            )}
+            <button 
+              onClick={() => setShowAi(!showAi)} 
+              className={`flex items-center gap-2 px-3.5 py-2 bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-2)] rounded-xl hover:text-[var(--accent)] hover:border-[var(--accent)]/30 transition-all ${showAi ? 'text-[var(--accent)] bg-[var(--accent)]/10 border-[var(--accent)]/20' : ''}`}
+              title="Toggle AI CodeBot Split Pane"
+            >
+              <Sparkles size={14} className={showAi ? 'animate-pulse text-[var(--accent)]' : ''} />
+              <span className="hidden md:inline text-[9px] font-black uppercase tracking-widest">CodeBot AI</span>
             </button>
             <button onClick={handleRun} disabled={loading || !activeFile} className={`flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-white rounded-xl shadow-lg active:scale-95 transition-all text-xs font-black uppercase tracking-widest ${loading ? 'opacity-50' : ''}`}>
               {loading ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} fill="white" />}
@@ -447,25 +562,48 @@ const CodeWorkspace = ({ user, settings }) => {
           </div>
         </div>
 
-        {/* Editor & Terminal Wrapper */}
-        <div className="flex-1 flex flex-col relative overflow-hidden">
+        {/* Main Split-Screen Layout Container */}
+        <div className="flex-1 flex flex-row relative overflow-hidden">
+          
+          {/* Editor & Terminal Section */}
+          <div className="flex-1 flex flex-col relative overflow-hidden min-w-0">
+            {/* Editor & Terminal Wrapper */}
+            <div className="flex-1 flex flex-col relative overflow-hidden">
           {activeFile ? (
-            <textarea 
-              ref={editorRef}
-              value={fileContents[activeFile] || ''}
-              onChange={(e) => handleContentChange(e.target.value)}
-              spellCheck={false}
-              className="flex-1 bg-[var(--bg-0)] text-[var(--text-1)] font-mono text-sm md:text-base p-6 outline-none resize-none custom-scrollbar leading-relaxed"
-              onKeyDown={(e) => {
-                if (e.key === 'Tab') {
-                  e.preventDefault();
-                  const start = e.target.selectionStart;
-                  const end = e.target.selectionEnd;
-                  handleContentChange((fileContents[activeFile] || '').substring(0, start) + "    " + (fileContents[activeFile] || '').substring(end));
-                  setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 4; }, 0);
-                }
-              }}
-            />
+            <div className="flex-1 flex flex-col relative overflow-hidden">
+              {collabMode && (
+                <div className="absolute top-6 right-6 z-50 flex items-center gap-3 bg-[var(--bg-2)]/95 backdrop-blur-2xl px-4 py-2.5 rounded-2xl border border-emerald-500/30 shadow-2xl shadow-indigo-500/20">
+                  <div className="relative flex h-3 w-3">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-[var(--text-0)] uppercase tracking-widest">
+                      Live Collab Session
+                    </span>
+                    <span className="text-[8px] font-bold text-emerald-400 uppercase mt-0.5">
+                      Host: {user?.username || 'raghav'} (Active)
+                    </span>
+                  </div>
+                </div>
+              )}
+              <textarea 
+                ref={editorRef}
+                value={fileContents[activeFile] || ''}
+                onChange={(e) => handleContentChange(e.target.value)}
+                spellCheck={false}
+                className="flex-1 bg-[var(--bg-0)] text-[var(--text-1)] font-mono text-sm md:text-base p-6 outline-none resize-none custom-scrollbar leading-relaxed"
+                onKeyDown={(e) => {
+                  if (e.key === 'Tab') {
+                    e.preventDefault();
+                    const start = e.target.selectionStart;
+                    const end = e.target.selectionEnd;
+                    handleContentChange((fileContents[activeFile] || '').substring(0, start) + "    " + (fileContents[activeFile] || '').substring(end));
+                    setTimeout(() => { e.target.selectionStart = e.target.selectionEnd = start + 4; }, 0);
+                  }
+                }}
+              />
+            </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-[var(--text-2)] p-10 text-center animate-in fade-in duration-700">
               <div className="w-20 h-20 bg-[var(--bg-hover)] rounded-3xl flex items-center justify-center mb-6 border border-[var(--border-subtle)] shadow-sm">
@@ -494,17 +632,35 @@ const CodeWorkspace = ({ user, settings }) => {
               </div>
             </div>
             {showTerminal && (
-              <pre className="p-4 md:p-6 h-[calc(100%-40px)] overflow-y-auto text-xs md:text-sm font-mono text-[var(--text-1)] leading-relaxed custom-scrollbar whitespace-pre-wrap">
-                <span className="text-[var(--accent)] opacity-50 font-bold">$ </span>{output || 'Nexus Core ready for execution...'}
-              </pre>
+              <div className="p-4 md:p-6 h-[calc(100%-40px)] flex flex-col justify-between overflow-hidden">
+                <pre className="flex-1 overflow-y-auto text-xs md:text-sm font-mono text-[var(--text-1)] leading-relaxed custom-scrollbar whitespace-pre-wrap mb-3 pr-2">
+                  <span className="text-[var(--accent)] opacity-50 font-bold">$ </span>{output || 'Nexus Core ready for execution...'}
+                </pre>
+                
+                {/* Shell Command Input */}
+                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]/20">
+                  <span className="text-[var(--accent)] font-black text-xs">$</span>
+                  <input 
+                    type="text" 
+                    value={terminalInput}
+                    onChange={e => setTerminalInput(e.target.value)}
+                    onKeyDown={handleTerminalSubmit}
+                    disabled={terminalLoading}
+                    placeholder={terminalLoading ? "Synthesizing Shell Response..." : "Type shell command (e.g., dir, pip list, python file.py)..."}
+                    className="flex-1 bg-transparent border-none outline-none text-[var(--text-0)] placeholder:text-[var(--text-2)] font-mono text-xs font-bold"
+                  />
+                  {terminalLoading && <Loader2 size={12} className="animate-spin text-[var(--accent)]" />}
+                </div>
+              </div>
             )}
           </div>
         </div>
+        </div> {/* Closes Editor & Terminal Section */}
 
         {/* AI Architect Panel */}
         {showAi && (
           <div className={`
-            fixed inset-0 lg:absolute lg:inset-y-0 lg:right-0 lg:left-auto lg:w-[480px] z-[200] bg-[var(--bg-2)] backdrop-blur-3xl flex flex-col shadow-2xl border-l border-[var(--border-subtle)] animate-in slide-in-from-right-10 duration-500
+            fixed inset-0 lg:relative lg:w-[420px] xl:w-[480px] z-[200] bg-[var(--bg-2)] backdrop-blur-3xl flex flex-col shadow-2xl lg:border-l border-[var(--border-subtle)] animate-in slide-in-from-right-10 duration-500
           `}>
             <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-1)]">
               <div className="flex items-center gap-4">
@@ -555,7 +711,16 @@ const CodeWorkspace = ({ user, settings }) => {
               {aiChat.map((m, i) => (
                 <div key={i} className={`flex flex-col ${m.role === 'user' ? 'items-end' : 'items-start'}`}>
                   <div className={`max-w-[92%] p-5 rounded-2xl border ${m.role === 'user' ? 'bg-[var(--accent)] border-transparent text-white rounded-br-none shadow-xl shadow-indigo-500/10' : 'bg-[var(--bg-2)] border-[var(--border-subtle)] text-[var(--text-1)] rounded-bl-none shadow-sm'}`}>
-                    <div className={`text-[8px] font-black uppercase tracking-widest mb-3 ${m.role === 'user' ? 'text-indigo-100' : 'text-[var(--accent)]'}`}>{m.role}</div>
+                    <div className={`text-[8px] font-black uppercase tracking-widest mb-3 flex items-center justify-between gap-2 ${m.role === 'user' ? 'text-indigo-100' : 'text-[var(--accent)]'}`}>
+                      <span>{m.role}</span>
+                      <button 
+                        onClick={() => navigator.clipboard.writeText(m.content)}
+                        className="p-1 hover:bg-white/10 rounded text-[8px] transition-all opacity-60 hover:opacity-100"
+                        title="Copy message"
+                      >
+                        <Copy size={10} />
+                      </button>
+                    </div>
                     <MessageContent content={m.content} />
                   </div>
                 </div>
@@ -570,7 +735,25 @@ const CodeWorkspace = ({ user, settings }) => {
             </div>
 
             <div className="p-6 border-t border-[var(--border-subtle)] bg-[var(--bg-1)] backdrop-blur-xl">
-              <div className="flex gap-2 p-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus-within:border-[var(--accent)] transition-all shadow-sm">
+              <div className="flex gap-2 p-2 bg-[var(--bg-input)] border border-[var(--border-default)] rounded-2xl focus-within:border-[var(--accent)] transition-all shadow-sm items-center">
+                {activeFile && (
+                  <button 
+                    onClick={() => {
+                      const fileName = activeFile.split(/[/\\]/).pop();
+                      const fileContent = fileContents[activeFile] || '';
+                      const extension = fileName.split('.').pop() || 'txt';
+                      setAiInput(prev => {
+                        const separator = prev ? '\n\n' : '';
+                        return prev + separator + `Existing code in [${fileName}]:\n\`\`\`${extension}\n${fileContent}\n\`\`\``;
+                      });
+                    }}
+                    type="button"
+                    className="p-2.5 bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] rounded-xl transition-all flex items-center justify-center shrink-0"
+                    title="Include active file code"
+                  >
+                    <FileCode size={16} />
+                  </button>
+                )}
                 <input 
                   type="text" 
                   value={aiInput}
@@ -590,6 +773,7 @@ const CodeWorkspace = ({ user, settings }) => {
             </div>
           </div>
         )}
+        </div> {/* Closes Main Split-Screen Layout Container */}
       </div>
     </div>
   );

@@ -80,12 +80,12 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
       <div className={`flex items-center gap-2 mb-1.5 ${isUser ? 'flex-row-reverse mr-2' : 'flex-row ml-2'}`}>
         <div className={`w-5 h-5 sm:w-6 sm:h-6 rounded-lg flex items-center justify-center text-[10px] font-black ${
           isUser 
-            ? 'bg-white/5 text-slate-400 border border-white/10' 
+            ? 'bg-[var(--bg-hover)] text-[var(--text-1)] border border-[var(--border-subtle)]' 
             : 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-lg shadow-indigo-500/20'
         }`}>
           {isUser ? <User size={10} className="sm:size-3" /> : <Sparkles size={10} className="sm:size-3" />}
         </div>
-        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">
+        <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.2em] text-[var(--text-2)]">
           {isUser ? 'Neural Link' : 'Nexus Engine'}
         </span>
       </div>
@@ -99,16 +99,16 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
 
         <div className={`relative px-4 py-3 sm:px-6 sm:py-5 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ${
           isUser 
-            ? 'bg-white/5 border-white/10 rounded-tr-none text-slate-100 hover:border-indigo-500/30 shadow-sm' 
-            : 'bg-white/[0.03] backdrop-blur-3xl border-white/5 rounded-tl-none text-slate-100 shadow-xl'
+            ? 'bg-[var(--bg-hover)] border-[var(--border-default)] rounded-tr-none text-[var(--text-0)] hover:border-[var(--accent)]/30 shadow-sm' 
+            : 'bg-[var(--bg-1)] backdrop-blur-3xl border-[var(--border-subtle)] rounded-tl-none text-[var(--text-0)] shadow-xl'
         }`}>
           {message.image && (
-            <div className="mb-4 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+            <div className="mb-4 rounded-2xl overflow-hidden border border-[var(--border-subtle)] shadow-2xl">
               <img src={message.image} alt="Nexus Generated" className="w-full h-auto object-cover hover:scale-105 transition-transform duration-700" />
             </div>
           )}
           
-          <div className="prose prose-invert prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-pre:bg-slate-900/50 prose-pre:border prose-pre:border-white/5 prose-pre:rounded-2xl text-base sm:text-sm">
+          <div className="prose prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-pre:bg-[var(--bg-2)] prose-pre:border prose-pre:border-[var(--border-subtle)] prose-pre:rounded-2xl text-[var(--text-0)] text-base sm:text-sm">
             {renderContent(displayedText)}
           </div>
           
@@ -117,7 +117,7 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
           )}
 
           {message.actionResult && (
-            <div className="mt-4 pt-4 border-t border-white/5 flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
+            <div className="mt-4 pt-4 border-t border-[var(--border-subtle)] flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400">
               <CheckCircle size={12} className="text-indigo-400" />
               <span>{message.actionResult}</span>
             </div>

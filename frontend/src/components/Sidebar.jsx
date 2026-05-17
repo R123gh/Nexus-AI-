@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   MessageSquare, 
   Zap, 
@@ -17,7 +17,9 @@ import {
   Layers,
   X,
   ChevronRight,
-  Sparkles
+  Sparkles,
+  Search,
+  Trash2
 } from 'lucide-react';
 
 const Sidebar = ({ 
@@ -33,8 +35,11 @@ const Sidebar = ({
   onShowNotifications, 
   unreadCount,
   setShowAnalytics,
-  onClose
+  onClose,
+  onDeleteConversation
 }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+
   const modes = [
     { id: 'chat', icon: MessageSquare, label: 'Chat' },
     { id: 'code-bot', icon: Sparkles, label: 'Code Bot' },
@@ -46,6 +51,10 @@ const Sidebar = ({
     { id: 'code-editor', icon: Code, label: 'Workspace' },
     { id: 'vault', icon: Shield, label: 'Vault' },
   ];
+
+  const filteredConversations = conversations.filter(c => 
+    (c.title || 'Nexus Query').toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <aside className={`
@@ -99,46 +108,112 @@ const Sidebar = ({
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar">
+      <nav className="flex-1 px-4 space-y-1 overflow-y-auto custom-scrollbar flex flex-col">
         <div className="px-4 mb-3 text-[10px] font-black text-[var(--text-2)] uppercase tracking-[0.25em] opacity-80 flex items-center gap-2">
           <div className="w-1 h-1 bg-[var(--accent)] rounded-full" />
           Neural Modules
         </div>
-        {modes.map(m => (
-          <button
-            key={m.id}
-            className={`
-              w-full flex items-center gap-3 px-4 py-3 rounded-[1.1rem] transition-all duration-300 group relative
-              ${activeMode === m.id 
-                ? 'bg-gradient-to-r from-indigo-500/10 to-transparent text-[var(--accent)]' 
-                : 'text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)]'}
-            `}
-            onClick={() => { setActiveMode(m.id); if(window.innerWidth < 768) onClose(); }}
-          >
-            {activeMode === m.id && (
-              <div className="absolute left-0 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-r-full shadow-[0_0_15px_rgba(99,102,241,0.3)]" />
-            )}
-            <m.icon size={18} className={activeMode === m.id ? 'text-[var(--accent)]' : 'text-[var(--text-2)] group-hover:text-[var(--text-1)]'} />
-            <span className={`text-sm font-bold tracking-tight ${activeMode === m.id ? 'translate-x-1' : ''} transition-transform`}>{m.label}</span>
-          </button>
-        ))}
+        <div className="space-y-1">
+          {modes.map(m => (
+            <button
+              key={m.id}
+              className={`
+                w-full flex items-center gap-3 px-4 py-3 rounded-[1.1rem] transition-all duration-300 group relative
+                ${activeMode === m.id 
+                  ? 'bg-gradient-to-r from-indigo-500/10 to-transparent text-[var(--accent)]' 
+                  : 'text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)]'}
+              `}
+              onClick={() => { setActiveMode(m.id); if(window.innerWidth < 768) onClose(); }}
+            >
+              {activeMode === m.id && (
+                <div className="absolute left-0 top-3 bottom-3 w-1 bg-[var(--accent)] rounded-r-full shadow-[0_0_15px_rgba(99,102,241,0.3)]" />
+              )}
+              <m.icon size={18} className={activeMode === m.id ? 'text-[var(--accent)]' : 'text-[var(--text-2)] group-hover:text-[var(--text-1)]'} />
+              <span className={`text-sm font-bold tracking-tight ${activeMode === m.id ? 'translate-x-1' : ''} transition-transform`}>{m.label}</span>
+            </button>
+          ))}
+        </div>
 
-        {conversations.length > 0 && (
-          <div className="mt-8 pb-6">
-            <div className="px-4 mb-3 text-[10px] font-black text-[var(--text-2)] uppercase tracking-[0.25em] opacity-80 flex items-center gap-2">
-              <div className="w-1 h-1 bg-purple-500 rounded-full" />
-              Synapses
+        {true && (
+          <div className="mt-6 flex flex-col flex-1 min-h-[250px]">
+            <div className="px-4 mb-2 text-[10px] font-black text-[var(--text-2)] uppercase tracking-[0.25em] opacity-80 flex items-center justify-between gap-2 border-t border-[var(--border-subtle)]/30 pt-4">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                Chats History (MongoDB)
+              </div>
+              <span className="text-[8px] bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded font-black">
+                {conversations.length}
+              </span>
             </div>
-            {conversations.slice(0, 6).map((c, i) => (
-              <button 
-                key={c.session_id || i} 
-                className="w-full flex items-center gap-3 px-4 py-2 rounded-xl text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)] transition-all group"
-                onClick={() => { onSelectConversation(c.session_id); if(window.innerWidth < 768) onClose(); }}
-              >
-                <div className="w-1 h-1 rounded-full bg-[var(--border-default)] group-hover:bg-[var(--accent)] transition-colors" />
-                <span className="text-xs truncate font-semibold">{c.title || 'Nexus Query'}</span>
-              </button>
-            ))}
+
+            {/* Sync & Security Badges */}
+            <div className="px-4 mb-3 flex flex-wrap gap-2">
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-emerald-500/5 border border-emerald-500/10 rounded-md text-[8px] font-black text-emerald-400 uppercase tracking-tighter">
+                <Database size={8} className="text-emerald-500" />
+                <span>Atlas Synced</span>
+              </div>
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-indigo-500/5 border border-indigo-500/10 rounded-md text-[8px] font-black text-indigo-400 uppercase tracking-tighter">
+                <Shield size={8} className="text-indigo-400" />
+                <span>Secured</span>
+              </div>
+            </div>
+
+            {/* Search Synapses */}
+            <div className="px-3 mb-3 relative">
+              <input 
+                type="text"
+                placeholder="Search synapses..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-3 py-2 bg-[var(--bg-1)] border border-[var(--border-subtle)] rounded-xl text-xs text-[var(--text-0)] outline-none focus:border-[var(--accent)] transition-all font-semibold"
+              />
+              <Search size={12} className="absolute left-6 top-3 text-[var(--text-2)]" />
+            </div>
+
+            {/* Scrollable history list */}
+            <div className="flex-1 overflow-y-auto max-h-[220px] custom-scrollbar space-y-1 pr-1">
+              {filteredConversations.length === 0 ? (
+                <div className="px-4 py-6 bg-[var(--bg-1)]/50 border border-[var(--border-subtle)]/30 rounded-2xl text-center shadow-inner">
+                  <p className="text-[10px] text-[var(--text-2)] font-semibold italic mb-1.5">
+                    {searchQuery ? 'No matching synapses' : 'No synapses stored yet'}
+                  </p>
+                  <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">
+                    {searchQuery ? 'Refine search' : 'Chats auto-saved to MongoDB Atlas'}
+                  </p>
+                </div>
+              ) : (
+                filteredConversations.map((c, i) => (
+                  <div 
+                    key={c.session_id || i}
+                    className="group flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-[var(--bg-hover)] transition-all"
+                  >
+                    <button 
+                      className="flex-1 flex items-center gap-2.5 min-w-0 text-left"
+                      onClick={() => { onSelectConversation(c.session_id); if(window.innerWidth < 768) onClose(); }}
+                    >
+                      <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] opacity-60 group-hover:opacity-100 group-hover:scale-125 transition-all" />
+                      <span className="text-xs truncate font-semibold text-[var(--text-1)] group-hover:text-[var(--text-0)] transition-colors">
+                        {c.title || 'Nexus Query'}
+                      </span>
+                    </button>
+                    {onDeleteConversation && (
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (window.confirm('Delete this chat log?')) {
+                            onDeleteConversation(c.session_id);
+                          }
+                        }}
+                        className="p-1 text-[var(--text-2)] hover:text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all hover:bg-rose-500/10"
+                        title="Purge synapse"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
       </nav>
