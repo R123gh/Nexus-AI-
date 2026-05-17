@@ -597,7 +597,7 @@ const App = () => {
                     </label>
                   </div>
                 </div>
-                <div className={`flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 bg-[var(--bg-input)] border rounded-2xl sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
+                <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className={`flex items-center gap-1.5 sm:gap-3 p-1.5 sm:p-2 bg-[var(--bg-input)] border rounded-2xl sm:rounded-[2.5rem] transition-all duration-500 focus-within:ring-8 focus-within:ring-indigo-500/5 ${
                   isDragging ? 'border-indigo-500 bg-indigo-500/5' : 'border-[var(--border-default)] focus-within:border-[var(--accent)]/40'
                 }`}
                   onDragOver={handleDragOver}
@@ -606,16 +606,16 @@ const App = () => {
                 >
                   {/* Mobile Action Group (Left) */}
                   <div className="flex sm:hidden items-center gap-0.5 ml-1">
-                    <button className="p-2 rounded-xl text-[var(--text-2)] hover:text-[var(--accent)] active:scale-90 transition-all" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                    <button type="button" className="p-2 rounded-xl text-[var(--text-2)] hover:text-[var(--accent)] active:scale-90 transition-all" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
                       <Paperclip size={16} />
                     </button>
-                    <button className={`p-2 rounded-xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                    <button type="button" className={`p-2 rounded-xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
                       <Mic size={16} />
                     </button>
                   </div>
 
                   {/* Desktop Attachment (Left) */}
-                  <button className="hidden sm:flex p-3 rounded-2xl bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] transition-all active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
+                  <button type="button" className="hidden sm:flex p-3 rounded-2xl bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)] transition-all active:scale-90" onClick={() => fileInputRef.current?.click()} disabled={isLoading}>
                     <Paperclip size={20} />
                   </button>
 
@@ -623,7 +623,6 @@ const App = () => {
                     type="text" 
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                     placeholder={selectedKB ? `Query ${selectedKB.name}...` : "Neural Link Active..."}
                     className="flex-1 bg-transparent border-none text-[var(--text-0)] text-xs sm:text-sm font-bold placeholder:text-[var(--text-2)] outline-none px-2 py-2"
                     disabled={isLoading}
@@ -631,19 +630,19 @@ const App = () => {
 
                   <div className="flex items-center gap-1 sm:gap-2 pr-1">
                     {/* Desktop Voice (Right) */}
-                    <button className={`hidden sm:flex p-3 rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
+                    <button type="button" className={`hidden sm:flex p-3 rounded-2xl transition-all active:scale-90 ${isRecordingVoice ? 'bg-rose-500 text-white animate-pulse' : 'bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--accent)]'}`} onClick={startVoiceDictation} disabled={isLoading}>
                       <Mic size={20} className={isRecordingVoice ? 'animate-bounce' : ''} />
                     </button>
                     
                     <button 
-                      onClick={() => handleSend()}
+                      type="submit"
                       className={`p-2 sm:p-3 rounded-xl sm:rounded-2xl bg-[var(--accent)] text-white shadow-lg shadow-indigo-500/20 hover:scale-105 active:scale-95 transition-all ${isLoading || !input.trim() ? 'opacity-50 grayscale' : ''}`}
                       disabled={isLoading || !input.trim()}
                     >
                       {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
                     </button>
                   </div>
-                </div>
+                </form>
                 
                 {input && (
                   <div className="flex gap-2 mt-4 overflow-x-auto pb-2 no-scrollbar animate-in fade-in slide-in-from-top-2 duration-500">

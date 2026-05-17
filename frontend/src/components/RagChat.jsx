@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Send, Bot, User, ArrowLeft, Loader2, BookOpen, 
-  Globe, Info, ChevronDown, ChevronUp, Layers, Zap, Search, ShieldCheck
+  Globe, Info, ChevronDown, ChevronUp, Layers, Zap, Search, ShieldCheck, AlertCircle
 } from 'lucide-react';
 import { apiChatKB } from '../utils/api';
 import { marked } from 'marked';
@@ -136,7 +136,7 @@ const RagChat = ({ kb, onBack, settings, user }) => {
                       : 'bg-[var(--bg-1)] text-[var(--text-0)] border border-[var(--border-subtle)] rounded-tl-none'
                   }`}>
                     <div 
-                      className="markdown-content prose prose-invert prose-sm max-w-none"
+                      className={`markdown-content prose prose-sm max-w-none ${document.documentElement.getAttribute('data-theme') !== 'light' ? 'prose-invert' : ''}`}
                       dangerouslySetInnerHTML={{ __html: marked(msg.content) }}
                     />
                   </div>

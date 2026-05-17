@@ -13,12 +13,19 @@ def list_kbs():
     # Don't send all chunks to frontend, just metadata
     safe_kbs = []
     for kb in kbs:
+        chunk_count = 0
+        try:
+            from services.rag_engine import get_kb_collection
+            collection = get_kb_collection(kb['id'])
+            chunk_count = collection.count()
+        except Exception as e:
+            print(f"Error getting collection count: {e}")
         safe_kbs.append({
             'id': kb['id'],
             'name': kb['name'],
             'description': kb['description'],
             'files': kb['files'],
-            'chunk_count': len(kb.get('chunks', []))
+            'chunk_count': chunk_count
         })
     return jsonify(safe_kbs), 200
 

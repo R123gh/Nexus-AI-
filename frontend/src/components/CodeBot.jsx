@@ -4,7 +4,7 @@ import {
   Copy, Save, ArrowRight, Loader2, X, Activity, 
   Bug, Zap, Layers, RefreshCcw, User
 } from 'lucide-react';
-import { apiChatStream, apiGetFiles, apiGetFileContent } from '../utils/api';
+import { apiChatStream, apiGetFiles, apiGetFileContent, apiSaveFile } from '../utils/api';
 import { marked } from 'marked';
 
 const CodeBot = ({ settings, user }) => {
@@ -19,6 +19,10 @@ const CodeBot = ({ settings, user }) => {
   const [activeTab, setActiveTab] = useState('chat'); // chat, debugging, architecture
   const [workspaceFiles, setWorkspaceFiles] = useState([]);
   const [showFileSelector, setShowFileSelector] = useState(false);
+  const [saveDialog, setSaveDialog] = useState(null); // { content: string, language: string }
+  const [selectedFileForSave, setSelectedFileForSave] = useState('');
+  const [customFileName, setCustomFileName] = useState('');
+  const [saveLoading, setSaveLoading] = useState(false);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -111,6 +115,37 @@ const CodeBot = ({ settings, user }) => {
     }
   };
 
+  const handleSaveToWorkspace = async () => {
+    if (!saveDialog) return;
+    setSaveLoading(true);
+    try {
+      let targetPath = selectedFileForSave;
+      if (!targetPath || targetPath === 'new') {
+        if (!customFileName.trim()) {
+          alert('Please enter a valid file name.');
+          setSaveLoading(false);
+          return;
+        }
+        targetPath = customFileName.trim();
+      }
+      
+      const res = await apiSaveFile(targetPath, saveDialog.content);
+      if (res.error) {
+        alert(`Error saving file: ${res.error}`);
+      } else {
+        alert(`Successfully saved to ${targetPath}!`);
+        setSaveDialog(null);
+        setCustomFileName('');
+        const list = await apiGetFiles();
+        setWorkspaceFiles(list || []);
+      }
+    } catch (err) {
+      alert(`Save failed: ${err.message}`);
+    } finally {
+      setSaveLoading(false);
+    }
+  };
+
   const MessageContent = ({ content }) => {
     const parts = content.split(/```/);
     return (
@@ -127,9 +162,32 @@ const CodeBot = ({ settings, user }) => {
                     <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
                     <span className="text-[10px] text-indigo-400 font-black uppercase tracking-widest">{lang || 'logic'}</span>
                   </div>
-                  <button onClick={() => navigator.clipboard.writeText(code)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
-                    <Copy size={14} className="text-slate-500" />
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button 
+                      onClick={() => {
+                        navigator.clipboard.writeText(code);
+                        alert('Code copied to clipboard!');
+                      }} 
+                      className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-indigo-400"
+                      title="Copy code snippet"
+                    >
+                      <Copy size={14} />
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSaveDialog({ content: code, language: lang });
+                        if (workspaceFiles.length > 0) {
+                          setSelectedFileForSave(workspaceFiles[0].path);
+                        } else {
+                          setSelectedFileForSave('new');
+                        }
+                      }}
+                      className="p-2 hover:bg-white/10 rounded-xl transition-all text-slate-400 hover:text-indigo-400"
+                      title="Save snippet to workspace file"
+                    >
+                      <Save size={14} />
+                    </button>
+                  </div>
                 </div>
                 <pre className="p-5 m-0 text-xs md:text-sm font-mono overflow-x-auto text-slate-300 custom-scrollbar leading-relaxed">{code}</pre>
               </div>
@@ -287,6 +345,76 @@ const CodeBot = ({ settings, user }) => {
           </div>
         </div>
       </div>
+
+      {/* Save to Workspace Dialog Overlay */}
+      {saveDialog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-md flex items-center justify-center p-4 z-[9999] animate-in fade-in duration-300">
+          <div className="bg-[var(--bg-2)] border border-[var(--border-default)] w-full max-w-md rounded-3xl shadow-2xl p-6 relative overflow-hidden animate-in zoom-in-95 duration-300">
+            <div className="absolute -top-12 -right-12 w-24 h-24 bg-indigo-500/10 rounded-full blur-2xl" />
+            
+            <div className="flex items-center justify-between pb-4 border-b border-[var(--border-subtle)]/20 mb-5">
+              <div className="flex items-center gap-2">
+                <Save size={18} className="text-[var(--accent)]" />
+                <h3 className="text-sm font-black uppercase tracking-wider text-[var(--text-0)]">Save Code to File</h3>
+              </div>
+              <button 
+                type="button"
+                onClick={() => setSaveDialog(null)}
+                className="text-[var(--text-2)] hover:text-rose-500 transition-colors"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="space-y-1.5 text-left">
+                <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-2)]">Select Workspace File</label>
+                <select 
+                  value={selectedFileForSave}
+                  onChange={(e) => setSelectedFileForSave(e.target.value)}
+                  className="w-full bg-[var(--bg-1)] border border-[var(--border-default)] text-[var(--text-0)] text-xs px-3.5 py-3 rounded-xl outline-none focus:border-[var(--accent)] transition-all font-semibold"
+                >
+                  {workspaceFiles.map(f => (
+                    <option key={f.path} value={f.path}>{f.name}</option>
+                  ))}
+                  <option value="new">+ Create New File...</option>
+                </select>
+              </div>
+
+              {selectedFileForSave === 'new' && (
+                <div className="space-y-1.5 text-left animate-in slide-in-from-top-2 duration-300">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-[var(--text-2)]">New File Name (e.g. app.py)</label>
+                  <input 
+                    type="text"
+                    value={customFileName}
+                    onChange={(e) => setCustomFileName(e.target.value)}
+                    placeholder="Enter file name with extension..."
+                    className="w-full bg-[var(--bg-input)] border border-[var(--border-default)] text-[var(--text-0)] text-xs px-3.5 py-3 rounded-xl outline-none focus:border-[var(--accent)] font-semibold"
+                  />
+                </div>
+              )}
+
+              <div className="pt-2 flex items-center gap-3">
+                <button 
+                  type="button"
+                  onClick={() => setSaveDialog(null)}
+                  className="flex-1 py-3 bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-2)] hover:text-[var(--text-0)] rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={handleSaveToWorkspace}
+                  disabled={saveLoading}
+                  className="flex-1 py-3 bg-[var(--accent)] text-white hover:bg-indigo-500 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-500/20"
+                >
+                  {saveLoading ? <Loader2 size={14} className="animate-spin" /> : 'Confirm Save'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

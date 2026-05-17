@@ -18,7 +18,7 @@ def extract_text_from_file(file_path, ocr_api_key=None):
     
     if ext == 'pdf':
         if not PyPDF2:
-            return "PyPDF2 is not installed. Cannot read PDF."
+            return "Error: PyPDF2 is not installed. Cannot read PDF."
         try:
             text = ""
             with open(file_path, 'rb') as f:
@@ -33,7 +33,7 @@ def extract_text_from_file(file_path, ocr_api_key=None):
             
     elif ext in ['docx', 'doc']:
         if not docx:
-            return "python-docx is not installed. Cannot read DOCX."
+            return "Error: python-docx is not installed. Cannot read DOCX."
         try:
             doc = docx.Document(file_path)
             text = "\n".join([para.text for para in doc.paragraphs])

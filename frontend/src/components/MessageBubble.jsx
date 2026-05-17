@@ -63,9 +63,11 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
       }
     });
 
+    const isDark = document.documentElement.getAttribute('data-theme') !== 'light';
+
     return (
       <div 
-        className="markdown-content prose prose-invert prose-sm max-w-none text-[var(--text-0)]" 
+        className={`markdown-content prose prose-sm max-w-none text-[var(--text-0)] ${isDark ? 'prose-invert' : ''}`} 
         dangerouslySetInnerHTML={{ __html: html }} 
       />
     );

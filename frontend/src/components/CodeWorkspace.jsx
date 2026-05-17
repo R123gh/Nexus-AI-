@@ -37,6 +37,7 @@ const CodeWorkspace = ({ user, settings }) => {
   const [showSnippets, setShowSnippets] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
   const [collabMode, setCollabMode] = useState(false);
+  const [showLiveDetails, setShowLiveDetails] = useState(false);
   const [newPkgName, setNewPkgName] = useState('');
   
   const [isCreatingFile, setIsCreatingFile] = useState(false);
@@ -229,7 +230,8 @@ const CodeWorkspace = ({ user, settings }) => {
   };
 
   const handleTerminalSubmit = async (e) => {
-    if (e.key === 'Enter' && terminalInput.trim()) {
+    if (e) e.preventDefault();
+    if (terminalInput.trim()) {
       const cmd = terminalInput.trim();
       setTerminalInput('');
       setTerminalLoading(true);
@@ -537,11 +539,54 @@ const CodeWorkspace = ({ user, settings }) => {
             </button>
             
             {collabMode && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 font-mono text-[9px] font-black tracking-widest uppercase animate-pulse">
+              <div 
+                onClick={() => setShowLiveDetails(!showLiveDetails)}
+                className="relative flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 font-mono text-[9px] font-black tracking-widest uppercase cursor-pointer hover:bg-emerald-500/20 transition-all select-none animate-pulse"
+              >
                 <div className="w-5 h-5 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-[9px]">
                   {(user?.username || 'R')[0].toUpperCase()}
                 </div>
                 <span>{user?.username || 'raghav'} (LIVE)</span>
+                
+                {showLiveDetails && (
+                  <div className="absolute top-10 right-0 w-72 bg-[var(--bg-2)] border border-[var(--border-default)] rounded-2xl shadow-2xl p-4 z-50 text-[var(--text-0)] font-sans uppercase-none tracking-normal normal-case animate-in fade-in slide-in-from-top-2 duration-300">
+                    <div className="flex items-center justify-between pb-3 border-b border-[var(--border-subtle)]/20 mb-3">
+                      <h4 className="text-xs font-black uppercase tracking-wider text-emerald-400">Live Status Panel</h4>
+                      <X size={12} className="cursor-pointer hover:text-rose-500" onClick={(e) => { e.stopPropagation(); setShowLiveDetails(false); }} />
+                    </div>
+                    <div className="space-y-2.5 text-[11px] font-medium text-left">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-2)]">Broadcaster:</span>
+                        <span className="font-bold">{user?.username || 'raghav'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-2)]">Email:</span>
+                        <span className="font-bold lowercase truncate max-w-[150px]">{user?.email || 'raghav@gmail.com'}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-2)]">Port Status:</span>
+                        <span className="font-bold font-mono text-emerald-400">5173 (Broadcasting)</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-[var(--text-2)]">Active Connection:</span>
+                        <span className="font-bold text-emerald-400">1 Client Connected</span>
+                      </div>
+                      <div className="mt-3 pt-3 border-t border-[var(--border-subtle)]/20 flex flex-col gap-2">
+                        <button 
+                          type="button"
+                          onClick={(e) => { 
+                            e.stopPropagation();
+                            navigator.clipboard.writeText(`${window.location.origin}/?session=${Math.random().toString(36).substring(7)}`);
+                            alert('Nexus Broadcast Link copied to clipboard!');
+                          }}
+                          className="w-full py-2 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-500 transition-all active:scale-95 text-center flex items-center justify-center gap-1"
+                        >
+                          <Copy size={10} /> Copy Invite Link
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             <button 
@@ -638,19 +683,17 @@ const CodeWorkspace = ({ user, settings }) => {
                 </pre>
                 
                 {/* Shell Command Input */}
-                <div className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]/20">
+                <form onSubmit={handleTerminalSubmit} className="flex items-center gap-2 pt-2 border-t border-[var(--border-subtle)]/20 w-full">
                   <span className="text-[var(--accent)] font-black text-xs">$</span>
                   <input 
                     type="text" 
                     value={terminalInput}
                     onChange={e => setTerminalInput(e.target.value)}
-                    onKeyDown={handleTerminalSubmit}
-                    disabled={terminalLoading}
-                    placeholder={terminalLoading ? "Synthesizing Shell Response..." : "Type shell command (e.g., dir, pip list, python file.py)..."}
+                    placeholder="Type shell command (e.g., dir, pip list, python file.py)..."
                     className="flex-1 bg-transparent border-none outline-none text-[var(--text-0)] placeholder:text-[var(--text-2)] font-mono text-xs font-bold"
                   />
                   {terminalLoading && <Loader2 size={12} className="animate-spin text-[var(--accent)]" />}
-                </div>
+                </form>
               </div>
             )}
           </div>
