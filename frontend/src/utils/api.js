@@ -454,3 +454,26 @@ export const apiSwarm = async (task, settings) => {
     if (!res.ok) throw new Error(data.error || 'Swarm execution failed');
     return data;
 };
+
+export const apiGetConversations = async (userId) => {
+    const res = await fetch(`${API_BASE}/conversations/${userId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch conversations');
+    return data.conversations || [];
+};
+
+export const apiGetSessionHistory = async (sessionId) => {
+    const res = await fetch(`${API_BASE}/session/${sessionId}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to fetch session history');
+    return data.history || [];
+};
+
+export const apiDeleteSession = async (sessionId) => {
+    const res = await fetch(`${API_BASE}/session/${sessionId}`, {
+        method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to delete session');
+    return data;
+};

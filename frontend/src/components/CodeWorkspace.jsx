@@ -7,7 +7,8 @@ import {
 } from 'lucide-react';
 import { 
   apiGetFiles, apiGetFileContent, apiSaveFile, apiRunCode, 
-  apiGetPackages, apiInstallPackage, apiChatStream, apiTerminalCommand
+  apiGetPackages, apiInstallPackage, apiChatStream, apiTerminalCommand,
+  apiGetConversations, apiGetSessionHistory, apiDeleteSession
 } from '../utils/api';
 import { marked } from 'marked';
 
@@ -52,6 +53,10 @@ const CodeWorkspace = ({ user, settings }) => {
   const [aiLoading, setAiLoading] = useState(false);
   const [autoApply, setAutoApply] = useState(false);
   const [architectMode, setArchitectMode] = useState(true);
+  
+  const [sessionId, setSessionId] = useState(localStorage.getItem('nexusai_workspace_session_id') || Math.random().toString(36).substring(7));
+  const [chatHistory, setChatHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
 
   const aiChatEndRef = useRef(null);
   const editorRef = useRef(null);
@@ -91,6 +96,64 @@ const CodeWorkspace = ({ user, settings }) => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const fetchChatHistory = async () => {
+    if (!user?.id) return;
+    setHistoryLoading(true);
+    try {
+      const data = await apiGetConversations(user.id);
+      setChatHistory(data || []);
+    } catch (err) {
+      console.error("Failed to fetch chat history:", err);
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const loadHistorySession = async (sessId) => {
+    try {
+      setHistoryLoading(true);
+      const historyMsgs = await apiGetSessionHistory(sessId);
+      if (historyMsgs && historyMsgs.length > 0) {
+        setAiChat(historyMsgs);
+        setSessionId(sessId);
+        localStorage.setItem('nexusai_workspace_session_id', sessId);
+        setSidebarTab('codebot');
+      } else {
+        alert('This session has no saved message history.');
+      }
+    } catch (err) {
+      console.error("Failed to load session history:", err);
+      alert('Failed to retrieve chat details.');
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const deleteHistorySession = async (e, sessId) => {
+    e.stopPropagation();
+    if (!confirm('Are you sure you want to delete this session?')) return;
+    try {
+      await apiDeleteSession(sessId);
+      fetchChatHistory();
+      if (sessionId === sessId) {
+        setSessionId(Math.random().toString(36).substring(7));
+        setAiChat([{ 
+          role: 'assistant', 
+          content: 'Welcome to the Nexus Intelligence Lab. I am your Senior Code Engineer. Share your logic or terminal errors, and I will help you build and debug faster.' 
+        }]);
+      }
+    } catch (err) {
+      console.error("Failed to delete session:", err);
+      alert('Failed to delete history session.');
+    }
+  };
+
+  useEffect(() => {
+    if (sidebarTab === 'history') {
+      fetchChatHistory();
+    }
+  }, [sidebarTab]);
 
   const openFile = async (path, defaultName = null) => {
     const name = defaultName || path.split('/').pop();
@@ -269,8 +332,8 @@ const CodeWorkspace = ({ user, settings }) => {
         const result = await apiChatStream(
           [...aiChat, { role: 'user', content: userMsg }],
           streamSettings,
-          null,
-          null,
+          user?.id,
+          sessionId,
           (chunkText) => {
             streamingMsgs = [...newMsgs, { role: 'assistant', content: chunkText }];
             setAiChat(streamingMsgs);
@@ -488,24 +551,49 @@ const CodeWorkspace = ({ user, settings }) => {
           )}
 
           {sidebarTab === 'history' && (
-            <div className="space-y-4">
-              <h4 className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest px-2">Neural History</h4>
-              {activeFile ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-[var(--accent)]/5 border border-[var(--accent)]/20 rounded-2xl">
-                    <p className="text-xs font-bold text-[var(--text-0)]">Current Draft</p>
-                    <p className="text-[9px] text-[var(--text-2)] mt-1 uppercase tracking-widest">Active Session</p>
+            <div className="flex flex-col flex-1 h-full space-y-4">
+              <div className="px-2 pb-2 border-b border-[var(--border-subtle)]/30 flex items-center justify-between">
+                <span className="text-[10px] font-black text-[var(--text-2)] uppercase tracking-widest flex items-center gap-1.5">
+                  <Clock size={12} className="text-[var(--accent)] animate-pulse" /> Chat History
+                </span>
+                <span className="text-[8px] font-black text-[var(--text-2)] uppercase bg-[var(--bg-hover)] px-1.5 py-0.5 rounded">Cloud Saved</span>
+              </div>
+              
+              <div className="flex-1 overflow-y-auto space-y-2 max-h-[350px] custom-scrollbar pr-1">
+                {historyLoading ? (
+                  <div className="flex items-center justify-center py-10 gap-2">
+                    <Loader2 size={16} className="animate-spin text-[var(--accent)]" />
+                    <span className="text-[9px] text-[var(--text-2)] uppercase tracking-widest font-black">Syncing...</span>
                   </div>
-                  {[1, 2].map(v => (
-                    <div key={v} className="p-4 bg-[var(--bg-2)] border border-[var(--border-subtle)] rounded-2xl opacity-60">
-                      <p className="text-xs font-bold text-[var(--text-1)]">Snapshot v1.0.{v}</p>
-                      <p className="text-[9px] text-[var(--text-2)] mt-1 uppercase tracking-widest">Saved 2h ago</p>
+                ) : chatHistory.map(session => (
+                  <div 
+                    key={session.id} 
+                    onClick={() => loadHistorySession(session.id)}
+                    className={`p-3 bg-[var(--bg-2)] border rounded-xl transition-all cursor-pointer text-left relative group/session ${
+                      sessionId === session.id 
+                        ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-sm' 
+                        : 'border-[var(--border-subtle)] hover:border-[var(--text-2)]/30'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start gap-2 mb-1.5 pr-6">
+                      <span className="text-[10px] font-bold text-[var(--text-0)] truncate">{session.title || 'Untitled Session'}</span>
+                      <span className="text-[8px] font-mono text-[var(--text-2)] whitespace-nowrap">{new Date(session.updatedAt || Date.now()).toLocaleDateString()}</span>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-xs text-[var(--text-2)] text-center py-10 italic">No file selected</p>
-              )}
+                    <p className="text-[9px] text-[var(--text-2)] truncate font-semibold">{session.lastMessage || 'No messages'}</p>
+                    
+                    <button 
+                      onClick={(e) => deleteHistorySession(e, session.id)}
+                      className="absolute right-2 top-2 p-1 hover:bg-rose-500/10 rounded-lg text-rose-500 transition-all opacity-0 group-hover/session:opacity-100"
+                      title="Delete Session"
+                    >
+                      <Trash2 size={10} />
+                    </button>
+                  </div>
+                ))}
+                {!historyLoading && chatHistory.length === 0 && (
+                  <div className="text-[10px] font-bold text-center text-slate-500 py-6 uppercase tracking-widest">No history sessions found</div>
+                )}
+              </div>
             </div>
           )}
         </div>

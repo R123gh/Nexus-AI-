@@ -23,6 +23,7 @@ const CodeBot = ({ settings, user }) => {
   const [selectedFileForSave, setSelectedFileForSave] = useState('');
   const [customFileName, setCustomFileName] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
+  const [sessionId] = useState(() => localStorage.getItem('nexusai_codebot_session_id') || `codebot-${Math.random().toString(36).substring(7)}`);
   const scrollRef = useRef(null);
 
   useEffect(() => {
@@ -86,8 +87,8 @@ const CodeBot = ({ settings, user }) => {
       const result = await apiChatStream(
         [...messages, userMsg],
         streamSettings,
-        null,
-        null,
+        user?.id,
+        sessionId,
         (chunkText) => {
           setMessages(prev => {
             const updated = [...prev];
