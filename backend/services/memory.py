@@ -332,11 +332,21 @@ class ConversationMemory:
             with self._get_conn() as conn:
                 import json
                 from datetime import datetime
-                conn.execute('''
-                    INSERT INTO usage_analytics (user_id, event_type, metadata, timestamp)
-                    VALUES (?, ?, ?, ?)
-                ''', (user_id, event_type, json.dumps(metadata) if metadata else None, datetime.utcnow().isoformat() + 'Z'))
-                conn.commit()
+                try:
+                    conn.execute('''
+                        INSERT INTO usage_analytics (user_id, event_type, metadata, timestamp)
+                        VALUES (?, ?, ?, ?)
+                    ''', (user_id, event_type, json.dumps(metadata) if metadata else None, datetime.utcnow().isoformat() + 'Z'))
+                    conn.commit()
+                except sqlite3.IntegrityError as e:
+                    if 'FOREIGN KEY' in str(e):
+                        conn.execute('''
+                            INSERT INTO usage_analytics (user_id, event_type, metadata, timestamp)
+                            VALUES (?, ?, ?, ?)
+                        ''', (None, event_type, json.dumps(metadata) if metadata else None, datetime.utcnow().isoformat() + 'Z'))
+                        conn.commit()
+                    else:
+                        raise e
                 return True
 
     def get_usage_stats(self, user_id):
@@ -427,11 +437,21 @@ class ConversationMemory:
 
         with self._lock:
             with self._get_conn() as conn:
-                conn.execute(
-                    'INSERT INTO messages (user_id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)',
-                    (user_id, session_id, role, content, time.time())
-                )
-                conn.commit()
+                try:
+                    conn.execute(
+                        'INSERT INTO messages (user_id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)',
+                        (user_id, session_id, role, content, time.time())
+                    )
+                    conn.commit()
+                except sqlite3.IntegrityError as e:
+                    if 'FOREIGN KEY' in str(e):
+                        conn.execute(
+                            'INSERT INTO messages (user_id, session_id, role, content, timestamp) VALUES (?, ?, ?, ?, ?)',
+                            (None, session_id, role, content, time.time())
+                        )
+                        conn.commit()
+                    else:
+                        raise e
 
                 # Trim history to max length
                 cursor = conn.cursor()
@@ -615,11 +635,21 @@ class ConversationMemory:
         with self._lock:
             with self._get_conn() as conn:
                 from datetime import datetime
-                conn.execute(
-                    'INSERT INTO notifications (user_id, title, message, type, timestamp) VALUES (?, ?, ?, ?, ?)',
-                    (user_id, title, message, notify_type, datetime.utcnow().isoformat() + 'Z')
-                )
-                conn.commit()
+                try:
+                    conn.execute(
+                        'INSERT INTO notifications (user_id, title, message, type, timestamp) VALUES (?, ?, ?, ?, ?)',
+                        (user_id, title, message, notify_type, datetime.utcnow().isoformat() + 'Z')
+                    )
+                    conn.commit()
+                except sqlite3.IntegrityError as e:
+                    if 'FOREIGN KEY' in str(e):
+                        conn.execute(
+                            'INSERT INTO notifications (user_id, title, message, type, timestamp) VALUES (?, ?, ?, ?, ?)',
+                            (None, title, message, notify_type, datetime.utcnow().isoformat() + 'Z')
+                        )
+                        conn.commit()
+                    else:
+                        raise e
 
     def get_notifications(self, user_id, limit=20):
         """Get recent notifications for a user."""

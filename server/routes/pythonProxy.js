@@ -10,6 +10,7 @@
  */
 
 const http = require('http');
+const https = require('https');
 const url = require('url');
 
 const PYTHON_BASE = process.env.PYTHON_BASE || 'http://127.0.0.1:5001';
@@ -19,9 +20,12 @@ async function pythonProxy(req, res) {
   console.log(`[PythonProxy] Proxying ${req.method} ${req.originalUrl} to ${targetUrl}`);
   
   const parsedUrl = url.parse(targetUrl);
+  const isHttps = parsedUrl.protocol === 'https:';
+  const transport = isHttps ? https : http;
+
   const options = {
     hostname: parsedUrl.hostname,
-    port: parsedUrl.port,
+    port: parsedUrl.port || (isHttps ? 443 : 80),
     path: parsedUrl.path,
     method: req.method,
     headers: { ...req.headers }
@@ -30,7 +34,7 @@ async function pythonProxy(req, res) {
   // Remove host header to avoid issues with target server
   delete options.headers.host;
 
-  const proxyReq = http.request(options, (pyRes) => {
+  const proxyReq = transport.request(options, (pyRes) => {
     console.log(`[PythonProxy] ${req.method} ${req.originalUrl} -> ${pyRes.statusCode}`);
     // Copy status code and headers
     res.status(pyRes.statusCode);

@@ -147,7 +147,16 @@ function updateUserProfile(user_id, { avatar_url, bio, email }) {
 
 // ─── Messages ─────────────────────────────────────────────────────────────
 function addMessage(session_id, role, content, user_id = null) {
-  stmts.insertMsg.run(user_id, session_id, role, content, new Date().toISOString());
+  try {
+    stmts.insertMsg.run(user_id, session_id, role, content, new Date().toISOString());
+  } catch (e) {
+    if (e.message.includes('FOREIGN KEY')) {
+      // Fallback to anonymous message if the user_id does not exist in the database (e.g. out of sync / ephemeral reset)
+      stmts.insertMsg.run(null, session_id, role, content, new Date().toISOString());
+    } else {
+      throw e;
+    }
+  }
   // Trim old messages
   const { cnt } = stmts.countSession.get(session_id);
   if (cnt > MAX_HISTORY) {
@@ -186,7 +195,15 @@ function deleteApiKey(user_id, service) {
 
 // ─── Analytics ────────────────────────────────────────────────────────────
 function logEvent(user_id, event_type, metadata = null) {
-  stmts.logEvent.run(user_id, event_type, metadata ? JSON.stringify(metadata) : null, new Date().toISOString());
+  try {
+    stmts.logEvent.run(user_id, event_type, metadata ? JSON.stringify(metadata) : null, new Date().toISOString());
+  } catch (e) {
+    if (e.message.includes('FOREIGN KEY')) {
+      stmts.logEvent.run(null, event_type, metadata ? JSON.stringify(metadata) : null, new Date().toISOString());
+    } else {
+      throw e;
+    }
+  }
 }
 function getUsageStats(user_id) {
   const { cnt: total_messages } = stmts.getStats.get(user_id);
@@ -198,7 +215,15 @@ function getUsageStats(user_id) {
 
 // ─── Notifications ─────────────────────────────────────────────────────────
 function addNotification(user_id, title, message, type = 'info') {
-  stmts.addNotif.run(user_id, title, message, type, new Date().toISOString());
+  try {
+    stmts.addNotif.run(user_id, title, message, type, new Date().toISOString());
+  } catch (e) {
+    if (e.message.includes('FOREIGN KEY')) {
+      stmts.addNotif.run(null, title, message, type, new Date().toISOString());
+    } else {
+      throw e;
+    }
+  }
 }
 function getNotifications(user_id, limit = 20) {
   return stmts.getNotifs.all(user_id, limit).map(r => ({
