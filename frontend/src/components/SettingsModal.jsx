@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { X, Moon, Sun, Monitor, Cpu, Shield, Globe, Database, Sliders, Save, RefreshCw, User } from 'lucide-react';
 import { MODELS, API_BASE } from '../utils/helpers';
+import { motion } from 'framer-motion';
 
 const SettingsModal = ({ settings, setSettings, user, setUser, onClose }) => {
   const [profileData, setProfileData] = useState({
@@ -42,166 +43,178 @@ const SettingsModal = ({ settings, setSettings, user, setUser, onClose }) => {
   };
 
   return (
-    <div className="modal-overlay" style={{
-      position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-      background: 'rgba(0,0,0,0.6)', zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center',
-      backdropFilter: 'blur(4px)'
-    }}>
-      <div className="modal-content" style={{
-        width: '100%', maxWidth: '500px', background: 'var(--bg-1)', borderRadius: '8px',
-        border: '1px solid var(--border-default)', boxShadow: 'var(--shadow-lg)', overflow: 'hidden'
-      }}>
-        <div style={{ padding: '24px', borderBottom: '1px solid var(--border-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ fontSize: '1.1rem', fontWeight: '800' }}>System Settings</h3>
-          <button className="icon-btn" onClick={onClose}><X size={20} /></button>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[2000] flex items-center justify-center" style={{ perspective: 1200 }}>
+      <motion.div 
+        initial={{ opacity: 0, y: 50, scale: 0.9, rotateX: -15 }}
+        animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+        transition={{ type: "spring", stiffness: 300, damping: 25 }}
+        className="w-full max-w-2xl bg-[var(--bg-1)] backdrop-blur-xl border border-[var(--border-subtle)] rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
+      >
+        <div className="p-6 border-b border-[var(--border-subtle)] flex items-center justify-between bg-[var(--bg-glass)]">
+          <h3 className="text-xl font-extrabold text-[var(--text-0)] bg-gradient-to-r from-indigo-500 to-purple-500 bg-clip-text text-transparent">System Settings</h3>
+          <button className="p-2 rounded-full hover:bg-[var(--bg-hover)] text-[var(--text-1)] hover:text-[var(--text-0)] transition-all active:scale-95" onClick={onClose}>
+            <X size={20} />
+          </button>
         </div>
 
-        <div style={{ padding: '32px', maxHeight: '70vh', overflowY: 'auto' }}>
+        <div className="p-6 overflow-y-auto custom-scrollbar flex flex-col gap-8">
           {user && (
-            <section style={{ marginBottom: '32px' }}>
-              <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-2)', letterSpacing: '0.1em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <User size={14} /> User Profile
+            <section className="space-y-4">
+              <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)] flex items-center gap-2">
+                <User size={14} className="text-indigo-400" /> User Profile
               </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginBottom: '8px' }}>Avatar URL</label>
+              <div className="grid gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">Avatar URL</label>
                   <input 
                     type="text"
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none' }}
+                    className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
                     placeholder="https://..."
                     value={profileData.avatar_url}
                     onChange={e => setProfileData({...profileData, avatar_url: e.target.value})}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginBottom: '8px' }}>Email Address</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">Email Address</label>
                   <input 
                     type="email"
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none' }}
+                    className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
                     placeholder="user@example.com"
                     value={profileData.email}
                     onChange={e => setProfileData({...profileData, email: e.target.value})}
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginBottom: '8px' }}>Bio</label>
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">Bio</label>
                   <textarea 
-                    style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none', resize: 'vertical', minHeight: '80px' }}
+                    className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all min-h-[80px] resize-y"
                     placeholder="Tell us about yourself..."
                     value={profileData.bio}
                     onChange={e => setProfileData({...profileData, bio: e.target.value})}
                   />
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div className="flex items-center justify-between pt-2">
                   <button 
                     onClick={handleUpdateProfile}
                     disabled={isUpdatingProfile}
-                    style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 20px', background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: '600', cursor: isUpdatingProfile ? 'wait' : 'pointer' }}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl text-sm font-bold transition-all active:scale-95 shadow-lg shadow-indigo-500/25 disabled:opacity-50 disabled:active:scale-100"
                   >
                     <Save size={16} /> {isUpdatingProfile ? 'Saving...' : 'Save Profile'}
                   </button>
-                  {profileMessage && <span style={{ fontSize: '0.85rem', color: profileMessage.includes('success') ? '#4ade80' : '#f87171' }}>{profileMessage}</span>}
+                  {profileMessage && <span className={`text-sm font-medium ${profileMessage.includes('success') ? 'text-green-500' : 'text-red-500'} animate-in fade-in`}>{profileMessage}</span>}
                 </div>
               </div>
             </section>
           )}
 
-          <section style={{ marginBottom: '32px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-2)', letterSpacing: '0.1em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Monitor size={14} /> Appearance
+          <section className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)] flex items-center gap-2">
+              <Monitor size={14} className="text-indigo-400" /> Appearance
             </h4>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
+            <div className="grid grid-cols-3 gap-3">
               {['dark', 'light', 'system'].map(theme => (
                 <button
                   key={theme}
                   onClick={() => updateSetting('theme', theme)}
-                  style={{
-                    padding: '12px', background: settings.theme === theme ? 'var(--text-0)' : 'var(--bg-0)',
-                    color: settings.theme === theme ? 'var(--bg-0)' : 'var(--text-1)',
-                    border: '1px solid var(--border-subtle)', borderRadius: '4px', fontSize: '0.85rem', fontWeight: '600',
-                    cursor: 'pointer', transition: 'var(--transition)', textTransform: 'capitalize'
-                  }}
+                  className={`flex flex-col items-center justify-center gap-2 p-4 rounded-xl border transition-all duration-300 active:scale-95 ${
+                    settings.theme === theme 
+                      ? 'bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/25' 
+                      : 'bg-[var(--bg-0)] text-[var(--text-1)] border-[var(--border-subtle)] hover:border-indigo-500/50 hover:bg-[var(--bg-hover)]'
+                  }`}
                 >
-                  {theme}
+                  {theme === 'dark' ? <Moon size={20} /> : theme === 'light' ? <Sun size={20} /> : <Monitor size={20} />}
+                  <span className="text-xs font-bold capitalize tracking-wide">{theme}</span>
                 </button>
               ))}
             </div>
           </section>
 
-          <section style={{ marginBottom: '32px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-2)', letterSpacing: '0.1em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield size={14} /> API Keys
+          <section className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)] flex items-center gap-2">
+              <Shield size={14} className="text-indigo-400" /> API Keys
             </h4>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginBottom: '8px' }}>Groq API Key</label>
-            <input 
-              type="password"
-              style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none', marginBottom: '16px' }}
-              placeholder="gsk_..."
-              value={settings.groq_api_key || ''}
-              onChange={e => updateSetting('groq_api_key', e.target.value)}
-            />
-          </section>
-
-          <section style={{ marginBottom: '32px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-2)', letterSpacing: '0.1em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Cpu size={14} /> Model Configuration
-            </h4>
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginBottom: '8px' }}>Inference Engine</label>
-            <select
-              style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none', marginBottom: '16px' }}
-              value={settings.model}
-              onChange={e => updateSetting('model', e.target.value)}
-            >
-              {MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-            </select>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
-              <label style={{ fontSize: '0.8rem', color: 'var(--text-2)' }}>Creativity (Temperature)</label>
-              <span style={{ fontSize: '0.8rem', fontWeight: '700' }}>{settings.temperature}</span>
-            </div>
-            <input 
-              type="range" min="0" max="1" step="0.1" 
-              style={{ width: '100%', accentColor: 'var(--text-0)' }}
-              value={settings.temperature}
-              onChange={e => updateSetting('temperature', parseFloat(e.target.value))}
-            />
-            <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-2)', marginTop: '16px', marginBottom: '8px' }}>System Prompt Instructions</label>
-            <textarea 
-              style={{ width: '100%', padding: '12px', background: 'var(--bg-input)', border: '1px solid var(--border-subtle)', borderRadius: '12px', color: 'var(--text-0)', outline: 'none', resize: 'vertical', minHeight: '80px' }}
-              placeholder="e.g. Act as a senior Python developer. Be concise."
-              value={settings.systemPrompt || ''}
-              onChange={e => updateSetting('systemPrompt', e.target.value)}
-            />
-          </section>
-
-          <section style={{ marginBottom: '32px' }}>
-            <h4 style={{ fontSize: '0.75rem', textTransform: 'uppercase', color: 'var(--text-2)', letterSpacing: '0.1em', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Shield size={14} /> Privacy & Context
-            </h4>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
-              <span style={{ fontSize: '0.9rem' }}>Simple Chat Mode</span>
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold text-[var(--text-2)]">Groq API Key</label>
               <input 
-                type="checkbox" 
-                checked={settings.simple_chat} 
-                onChange={e => updateSetting('simple_chat', e.target.checked)}
-                style={{ width: '18px', height: '18px' }}
+                type="password"
+                className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                placeholder="gsk_..."
+                value={settings.groq_api_key || ''}
+                onChange={e => updateSetting('groq_api_key', e.target.value)}
               />
             </div>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-2)', lineHeight: '1.4' }}>
-              Disabling simple chat enables deeper reasoning and autonomous planning capabilities.
-            </p>
+          </section>
+
+          <section className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)] flex items-center gap-2">
+              <Cpu size={14} className="text-indigo-400" /> Model Configuration
+            </h4>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-[var(--text-2)]">Inference Engine</label>
+                <select
+                  className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all font-medium appearance-none cursor-pointer"
+                  value={settings.model}
+                  onChange={e => updateSetting('model', e.target.value)}
+                >
+                  {MODELS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2 pt-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-semibold text-[var(--text-2)]">Creativity (Temperature)</label>
+                  <span className="text-xs font-black text-indigo-500 bg-indigo-500/10 px-2 py-0.5 rounded-md">{settings.temperature}</span>
+                </div>
+                <input 
+                  type="range" min="0" max="1" step="0.1" 
+                  className="w-full accent-indigo-500 cursor-pointer h-1.5 bg-[var(--border-subtle)] rounded-full appearance-none outline-none"
+                  value={settings.temperature}
+                  onChange={e => updateSetting('temperature', parseFloat(e.target.value))}
+                />
+              </div>
+              <div className="space-y-1.5 pt-2">
+                <label className="text-xs font-semibold text-[var(--text-2)]">System Prompt Instructions</label>
+                <textarea 
+                  className="w-full p-3 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl text-[var(--text-0)] outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 transition-all min-h-[80px] resize-y"
+                  placeholder="e.g. Act as a senior Python developer. Be concise."
+                  value={settings.systemPrompt || ''}
+                  onChange={e => updateSetting('systemPrompt', e.target.value)}
+                />
+              </div>
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <h4 className="text-xs font-bold uppercase tracking-widest text-[var(--text-2)] flex items-center gap-2">
+              <Sliders size={14} className="text-indigo-400" /> Privacy & Context
+            </h4>
+            <div className="flex items-center justify-between p-4 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-xl hover:border-indigo-500/30 transition-colors">
+              <div className="space-y-1">
+                <span className="text-sm font-bold text-[var(--text-0)]">Simple Chat Mode</span>
+                <p className="text-xs text-[var(--text-2)]">Disabling simple chat enables deeper reasoning and autonomous planning capabilities.</p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  className="sr-only peer"
+                  checked={settings.simple_chat} 
+                  onChange={e => updateSetting('simple_chat', e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-[var(--border-subtle)] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+              </label>
+            </div>
           </section>
         </div>
 
-        <div style={{ padding: '24px', background: 'var(--bg-0)', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+        <div className="p-5 border-t border-[var(--border-subtle)] bg-[var(--bg-glass)] flex justify-end">
           <button 
-            className="icon-btn" 
+            className="px-6 py-2.5 bg-[var(--text-0)] text-[var(--bg-0)] rounded-xl text-sm font-bold transition-all active:scale-95 hover:shadow-lg"
             onClick={onClose}
-            style={{ background: 'var(--text-0)', color: 'var(--bg-0)', padding: '10px 24px', borderRadius: '4px', fontSize: '0.85rem', fontWeight: '700' }}
           >
             Done
           </button>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -4,6 +4,7 @@ import { marked } from 'marked';
 import hljs from 'highlight.js';
 import 'highlight.js/styles/github-dark.css';
 import { formatTime } from '../utils/helpers';
+import { motion } from 'framer-motion';
 
 const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPinned }) => {
   const isUser = message.role === 'user';
@@ -74,8 +75,12 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
   };
 
   return (
-    <div 
-      className={`group w-full max-w-5xl mx-auto px-2 py-2 sm:px-6 sm:py-4 flex flex-col ${isUser ? 'items-end' : 'items-start'} transition-all duration-300 animate-in fade-in slide-in-from-bottom-2`}
+    <motion.div 
+      initial={{ opacity: 0, y: 30, scale: 0.95, rotateX: 15 }}
+      animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
+      transition={{ type: "spring", stiffness: 250, damping: 22 }}
+      style={{ perspective: 1000 }}
+      className={`group w-full max-w-5xl mx-auto px-2 py-2 sm:px-6 sm:py-4 flex flex-col ${isUser ? 'items-end' : 'items-start'} transition-all duration-300`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
@@ -101,8 +106,8 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
 
         <div className={`relative px-4 py-3 sm:px-6 sm:py-5 rounded-2xl sm:rounded-[2rem] border transition-all duration-300 ${
           isUser 
-            ? 'bg-[var(--bg-hover)] border-[var(--border-default)] rounded-tr-none text-[var(--text-0)] hover:border-[var(--accent)]/30 shadow-sm' 
-            : 'bg-[var(--bg-1)] backdrop-blur-3xl border-[var(--border-subtle)] rounded-tl-none text-[var(--text-0)] shadow-xl'
+            ? 'bg-[var(--bg-hover)] border-[var(--border-default)] rounded-tr-none text-[var(--text-0)] hover:border-[var(--accent)]/30 shadow-sm hover:shadow-md hover:-translate-y-0.5' 
+            : 'bg-[var(--bg-1)] backdrop-blur-3xl border-[var(--border-subtle)] rounded-tl-none text-[var(--text-0)] shadow-xl hover:shadow-2xl hover:-translate-y-0.5'
         }`}>
           {message.image && (
             <div className="mb-4 rounded-2xl overflow-hidden border border-[var(--border-subtle)] shadow-2xl">
@@ -156,7 +161,7 @@ const MessageBubble = ({ message, onCopy, onBranch, onPin, onEdit, isMuted, isPi
           {formatTime(message.timestamp)}
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

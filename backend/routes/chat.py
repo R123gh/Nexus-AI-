@@ -323,6 +323,15 @@ def delete_session(session_id):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@chat_bp.route('/conversations/clear/<user_id>', methods=['DELETE'])
+def clear_user_conversations(user_id):
+    """Delete all conversation sessions for a given user."""
+    try:
+        memory.clear_user_conversations(user_id)
+        return jsonify({'success': True}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 
 # ─── Feature: Streaming Responses (SSE) ──────────────────────
 @chat_bp.route('/chat/stream', methods=['POST'])

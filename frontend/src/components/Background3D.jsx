@@ -2,151 +2,171 @@ import React, { useEffect, useRef } from 'react';
 
 const Background3D = () => {
   const canvasRef = useRef(null);
-  const animationRef = useRef(null);
-  const mouseRef = useRef({ x: 0, y: 0 });
-  const isVisibleRef = useRef(true);
+  const mouseRef = useRef({ x: window.innerWidth / 2, y: window.innerHeight / 2, targetX: window.innerWidth / 2, targetY: window.innerHeight / 2 });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     
+    let width, height;
     const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
+      width = window.innerWidth;
+      height = window.innerHeight;
+      canvas.width = width;
+      canvas.height = height;
     };
-    resize();
     window.addEventListener('resize', resize);
+    resize();
 
-    // Particle system
-    const particles = [];
-    const particleCount = 60;
-    const connectionDistance = 120;
+    // 3D Starfield
+    const stars = Array.from({ length: 300 }, () => ({
+      x: (Math.random() - 0.5) * 2000,
+      y: (Math.random() - 0.5) * 2000,
+      z: Math.random() * 2000,
+      size: Math.random() * 1.5 + 0.5
+    }));
 
-    for (let i = 0; i < particleCount; i++) {
-      particles.push({
-        x: Math.random() * canvas.width,
-        y: Math.random() * canvas.height,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: (Math.random() - 0.5) * 0.3,
-        radius: Math.random() * 1.5 + 0.5,
-        color: `hsla(${Math.random() * 60 + 240}, 70%, 60%, 0.5)`
-      });
-    }
+    // 3D Geometric Shapes Data
+    const shapes = [
+      {
+        type: 'cube',
+        xOff: 0.85, yOff: 0.2, // Screen position %
+        size: 250,
+        zPos: 4,
+        rotX: 0, rotY: 0, rotZ: 0,
+        speedX: 0.005, speedY: 0.007, speedZ: 0.003,
+        vertices: [
+          [-1, -1, -1], [1, -1, -1], [1, 1, -1], [-1, 1, -1],
+          [-1, -1, 1], [1, -1, 1], [1, 1, 1], [-1, 1, 1]
+        ],
+        edges: [
+          [0,1], [1,2], [2,3], [3,0],
+          [4,5], [5,6], [6,7], [7,4],
+          [0,4], [1,5], [2,6], [3,7]
+        ]
+      },
+      {
+        type: 'pyramid',
+        xOff: 0.15, yOff: 0.8,
+        size: 200,
+        zPos: 5,
+        rotX: 0, rotY: 0, rotZ: 0,
+        speedX: -0.004, speedY: 0.006, speedZ: 0.008,
+        vertices: [
+          [0, -1, 0], // Top
+          [-1, 1, -1], [1, 1, -1], [1, 1, 1], [-1, 1, 1] // Base
+        ],
+        edges: [
+          [0,1], [0,2], [0,3], [0,4],
+          [1,2], [2,3], [3,4], [4,1]
+        ]
+      }
+    ];
 
     const animate = () => {
-      if (!isVisibleRef.current) {
-        animationRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      // Smooth mouse interpolation
+      mouseRef.current.x += (mouseRef.current.targetX - mouseRef.current.x) * 0.05;
+      mouseRef.current.y += (mouseRef.current.targetY - mouseRef.current.y) * 0.05;
       
-      // Update and draw particles
-      particles.forEach((particle, i) => {
-        // Update position
-        particle.x += particle.vx;
-        particle.y += particle.vy;
+      const mouseOffsetX = (mouseRef.current.x - width / 2) * 0.05;
+      const mouseOffsetY = (mouseRef.current.y - height / 2) * 0.05;
 
-        // Mouse interaction (optimized)
-        const dx = mouseRef.current.x - particle.x;
-        const dy = mouseRef.current.y - particle.y;
-        const dist = dx * dx + dy * dy;
-        
-        if (dist < 22500) { // 150 squared
-          particle.x -= dx * 0.015;
-          particle.y -= dy * 0.015;
+      ctx.clearRect(0, 0, width, height);
+      
+      const cx = width / 2;
+      const cy = height / 2;
+      const fov = 400;
+
+      // Draw 3D Stars (Parallaxed by mouse)
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      ctx.fillStyle = isLight ? 'rgba(99, 102, 241, 0.4)' : 'rgba(255, 255, 255, 0.5)';
+      
+      stars.forEach(star => {
+        star.z -= 1.5;
+        if (star.z <= 0) {
+          star.z = 2000;
+          star.x = (Math.random() - 0.5) * 2000;
+          star.y = (Math.random() - 0.5) * 2000;
         }
+        
+        const scale = fov / (fov + star.z);
+        const px = (star.x - mouseOffsetX * (2000 - star.z) * 0.001) * scale + cx;
+        const py = (star.y - mouseOffsetY * (2000 - star.z) * 0.001) * scale + cy;
+        const radius = Math.max(0.1, star.size * scale);
+        
+        if (px > 0 && px < width && py > 0 && py < height) {
+          ctx.beginPath();
+          ctx.arc(px, py, radius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      });
 
-        // Boundary check
-        if (particle.x < 0 || particle.x > canvas.width) particle.vx *= -1;
-        if (particle.y < 0 || particle.y > canvas.height) particle.vy *= -1;
+      // Draw 3D Wireframe Shapes
+      ctx.strokeStyle = isLight ? 'rgba(99, 102, 241, 0.25)' : 'rgba(139, 92, 246, 0.25)';
+      ctx.lineWidth = 1.5;
 
-        // Draw particle
-        ctx.beginPath();
-        ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-        ctx.fillStyle = particle.color;
-        ctx.fill();
+      shapes.forEach(shape => {
+        shape.rotX += shape.speedX;
+        shape.rotY += shape.speedY;
+        shape.rotZ += shape.speedZ;
 
-        // Draw connections (optimized)
-        particles.slice(i + 1).forEach(otherParticle => {
-          const dx = particle.x - otherParticle.x;
-          const dy = particle.y - otherParticle.y;
-          const distance = dx * dx + dy * dy;
+        const sX = Math.sin(shape.rotX), cX = Math.cos(shape.rotX);
+        const sY = Math.sin(shape.rotY), cY = Math.cos(shape.rotY);
+        const sZ = Math.sin(shape.rotZ), cZ = Math.cos(shape.rotZ);
 
-          if (distance < connectionDistance * connectionDistance) {
-            ctx.beginPath();
-            ctx.moveTo(particle.x, particle.y);
-            ctx.lineTo(otherParticle.x, otherParticle.y);
-            const opacity = (1 - Math.sqrt(distance) / connectionDistance) * 0.25;
-            ctx.strokeStyle = `rgba(99, 102, 241, ${opacity})`;
-            ctx.lineWidth = 0.5;
-            ctx.stroke();
-          }
+        const projected = shape.vertices.map(v => {
+          // Rot Z
+          let x1 = v[0] * cZ - v[1] * sZ;
+          let y1 = v[0] * sZ + v[1] * cZ;
+          let z1 = v[2];
+          // Rot Y
+          let x2 = x1 * cY - z1 * sY;
+          let y2 = y1;
+          let z2 = x1 * sY + z1 * cY;
+          // Rot X
+          let x3 = x2;
+          let y3 = y2 * cX - z2 * sX;
+          let z3 = y2 * sX + z2 * cX;
+
+          // Parallax Translation & Projection
+          z3 += shape.zPos;
+          const scale = shape.size / z3;
+          
+          const px = x3 * scale + (width * shape.xOff) - (mouseOffsetX * 0.5);
+          const py = y3 * scale + (height * shape.yOff) - (mouseOffsetY * 0.5);
+          return [px, py];
+        });
+
+        shape.edges.forEach(edge => {
+          ctx.beginPath();
+          ctx.moveTo(projected[edge[0]][0], projected[edge[0]][1]);
+          ctx.lineTo(projected[edge[1]][0], projected[edge[1]][1]);
+          ctx.stroke();
         });
       });
 
-      // Draw floating geometric shapes
-      const time = Date.now() * 0.0008;
-      ctx.save();
-      ctx.translate(canvas.width * 0.85, canvas.height * 0.15);
-      ctx.rotate(time * 0.4);
-      ctx.strokeStyle = 'rgba(139, 92, 246, 0.08)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.rect(-40, -40, 80, 80);
-      ctx.stroke();
-      ctx.restore();
-
-      ctx.save();
-      ctx.translate(canvas.width * 0.12, canvas.height * 0.85);
-      ctx.rotate(-time * 0.25);
-      ctx.strokeStyle = 'rgba(99, 102, 241, 0.08)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(0, 0, 50, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.restore();
-
-      animationRef.current = requestAnimationFrame(animate);
+      requestAnimationFrame(animate);
     };
-
-    animate();
+    
+    let animId = requestAnimationFrame(animate);
 
     const handleMouseMove = (e) => {
-      mouseRef.current = { x: e.clientX, y: e.clientY };
+      mouseRef.current.targetX = e.clientX;
+      mouseRef.current.targetY = e.clientY;
     };
     window.addEventListener('mousemove', handleMouseMove);
-
-    // Visibility API for performance
-    const handleVisibilityChange = () => {
-      isVisibleRef.current = !document.hidden;
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
 
     return () => {
       window.removeEventListener('resize', resize);
       window.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-      if (animationRef.current) {
-        cancelAnimationFrame(animationRef.current);
-      }
+      cancelAnimationFrame(animId);
     };
   }, []);
 
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        zIndex: 0,
-        pointerEvents: 'none',
-        opacity: 0.5
-      }}
-    />
+    <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: 0, pointerEvents: 'none', background: 'var(--bg-0)' }}>
+      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', opacity: 0.8 }} />
+    </div>
   );
 };
 

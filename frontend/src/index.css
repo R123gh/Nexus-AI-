@@ -87,9 +87,11 @@ html, body {
 }
 html, body, #root {
     @apply w-full h-full m-0 p-0 overflow-x-hidden bg-[var(--bg-0)];
+    color: var(--text-0);
     font-family: var(--font-primary);
     -webkit-font-smoothing: antialiased;
     scroll-behavior: smooth;
+    transition: background-color 0.5s ease-out, color 0.5s ease-out;
 }
 
 /* Custom Scrollbar for Premium Feel */

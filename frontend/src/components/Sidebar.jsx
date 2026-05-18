@@ -27,6 +27,7 @@ const Sidebar = ({
   setActiveMode, 
   setShowSettings, 
   conversations, 
+  sessionId,
   onNewChat, 
   isOpen, 
   user, 
@@ -36,9 +37,40 @@ const Sidebar = ({
   unreadCount,
   setShowAnalytics,
   onClose,
-  onDeleteConversation
+  onDeleteConversation,
+  onClearConversations
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+
+  const formatSessionTime = (dateVal) => {
+    if (!dateVal) return '';
+    try {
+      let date;
+      const parsedNum = Number(dateVal);
+      if (!isNaN(parsedNum)) {
+        if (parsedNum < 10000000000) {
+          date = new Date(parsedNum * 1000);
+        } else {
+          date = new Date(parsedNum);
+        }
+      } else {
+        date = new Date(dateVal);
+      }
+
+      if (isNaN(date.getTime())) return '';
+
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHrs = Math.floor(diffMins / 60);
+      if (diffHrs < 24) return `${diffHrs}h ago`;
+      return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    } catch (err) {
+      return '';
+    }
+  };
 
   const modes = [
     { id: 'chat', icon: MessageSquare, label: 'Chat' },
@@ -97,13 +129,13 @@ const Sidebar = ({
       {/* New Chat Button */}
       <div className="px-5 py-6">
         <button 
-          className="w-full py-4 bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-0)] rounded-[1.25rem] font-bold text-sm flex items-center justify-center gap-3 transition-all group shadow-sm hover:shadow-md"
+          className="w-full py-4 bg-[var(--bg-input)] hover:bg-[var(--bg-hover)] border border-[var(--border-subtle)] text-[var(--text-0)] rounded-[1.25rem] font-bold text-sm flex items-center justify-center gap-3 transition-all duration-300 group shadow-sm hover:shadow-lg hover:-translate-y-1 active:scale-95"
           onClick={() => { onNewChat(); if(window.innerWidth < 768) onClose(); }}
         >
-          <div className="w-6 h-6 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center group-hover:bg-[var(--accent)] group-hover:text-white transition-all">
+          <div className="w-6 h-6 bg-[var(--accent)]/10 rounded-lg flex items-center justify-center group-hover:bg-[var(--accent)] group-hover:text-white group-hover:rotate-180 transition-all duration-500">
             <Plus size={16} />
           </div>
-          <span className="tracking-wide">New Intelligence</span>
+          <span className="tracking-wide group-hover:text-[var(--accent)] transition-colors duration-300">New Intelligence</span>
         </button>
       </div>
 
@@ -118,10 +150,10 @@ const Sidebar = ({
             <button
               key={m.id}
               className={`
-                w-full flex items-center gap-3 px-4 py-3 rounded-[1.1rem] transition-all duration-300 group relative
+                w-full flex items-center gap-3 px-4 py-3 rounded-[1.1rem] transition-all duration-300 group relative hover:-translate-y-0.5 active:scale-95
                 ${activeMode === m.id 
-                  ? 'bg-gradient-to-r from-indigo-500/10 to-transparent text-[var(--accent)]' 
-                  : 'text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)]'}
+                  ? 'bg-gradient-to-r from-indigo-500/10 to-transparent text-[var(--accent)] shadow-sm' 
+                  : 'text-[var(--text-1)] hover:bg-[var(--bg-hover)] hover:text-[var(--text-0)] hover:shadow-sm'}
               `}
               onClick={() => { setActiveMode(m.id); if(window.innerWidth < 768) onClose(); }}
             >
@@ -135,15 +167,21 @@ const Sidebar = ({
         </div>
 
         {true && (
-          <div className="mt-6 flex flex-col flex-1 min-h-[250px]">
+          <div className="mt-6 flex flex-col flex-1 min-h-[280px]">
             <div className="px-4 mb-2 text-[10px] font-black text-[var(--text-2)] uppercase tracking-[0.25em] opacity-80 flex items-center justify-between gap-2 border-t border-[var(--border-subtle)]/30 pt-4">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-                Chats History (MongoDB)
+                History ({conversations.length})
               </div>
-              <span className="text-[8px] bg-[var(--accent)]/10 text-[var(--accent)] px-1.5 py-0.5 rounded font-black">
-                {conversations.length}
-              </span>
+              {onClearConversations && conversations.length > 0 && (
+                <button 
+                  onClick={onClearConversations}
+                  className="text-[8px] bg-rose-500/10 hover:bg-rose-500 text-rose-500 hover:text-white px-2 py-0.5 rounded transition-all font-black uppercase tracking-widest flex items-center gap-1 border border-rose-500/10"
+                  title="Clear all chat history"
+                >
+                  <Trash2 size={8} /> Clear All
+                </button>
+              )}
             </div>
 
             {/* Sync & Security Badges */}
@@ -159,59 +197,86 @@ const Sidebar = ({
             </div>
 
             {/* Search Synapses */}
-            <div className="px-3 mb-3 relative">
+            <div className="px-3 mb-3 relative group">
               <input 
                 type="text"
                 placeholder="Search synapses..."
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-3 py-2 bg-[var(--bg-1)] border border-[var(--border-subtle)] rounded-xl text-xs text-[var(--text-0)] outline-none focus:border-[var(--accent)] transition-all font-semibold"
+                className="w-full pl-8 pr-7 py-2.5 bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl text-xs text-[var(--text-0)] outline-none focus:border-[var(--accent)] focus:ring-4 focus:ring-[var(--accent)]/10 transition-all font-semibold"
               />
-              <Search size={12} className="absolute left-6 top-3 text-[var(--text-2)]" />
+              <Search size={12} className="absolute left-6 top-3.5 text-[var(--text-2)] group-focus-within:text-[var(--accent)] transition-colors" />
+              {searchQuery && (
+                <button 
+                  onClick={() => setSearchQuery('')} 
+                  className="absolute right-5 top-3 p-0.5 bg-[var(--bg-hover)] text-[var(--text-2)] hover:text-[var(--text-0)] rounded-lg transition-colors"
+                >
+                  <X size={10} />
+                </button>
+              )}
             </div>
 
             {/* Scrollable history list */}
-            <div className="flex-1 overflow-y-auto max-h-[220px] custom-scrollbar space-y-1 pr-1">
+            <div className="flex-1 overflow-y-auto max-h-[220px] custom-scrollbar space-y-1.5 pr-1">
               {filteredConversations.length === 0 ? (
-                <div className="px-4 py-6 bg-[var(--bg-1)]/50 border border-[var(--border-subtle)]/30 rounded-2xl text-center shadow-inner">
-                  <p className="text-[10px] text-[var(--text-2)] font-semibold italic mb-1.5">
+                <div className="mx-3 px-4 py-6 bg-[var(--bg-1)]/50 border border-[var(--border-subtle)]/30 rounded-2xl text-center shadow-inner">
+                  <p className="text-[10px] text-[var(--text-2)] font-semibold italic mb-1 mb-1.5">
                     {searchQuery ? 'No matching synapses' : 'No synapses stored yet'}
                   </p>
                   <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">
-                    {searchQuery ? 'Refine search' : 'Chats auto-saved to MongoDB Atlas'}
+                    {searchQuery ? 'Refine search query' : 'Chats auto-saved to MongoDB Atlas'}
                   </p>
                 </div>
               ) : (
-                filteredConversations.map((c, i) => (
-                  <div 
-                    key={c.session_id || i}
-                    className="group flex items-center justify-between px-2 py-1.5 rounded-xl hover:bg-[var(--bg-hover)] transition-all"
-                  >
-                    <button 
-                      className="flex-1 flex items-center gap-2.5 min-w-0 text-left"
+                filteredConversations.map((c, i) => {
+                  const isCurrentActive = sessionId === c.session_id;
+                  return (
+                    <div 
+                      key={c.session_id || i}
                       onClick={() => { onSelectConversation(c.session_id); if(window.innerWidth < 768) onClose(); }}
+                      className={`group mx-3 p-2.5 rounded-2xl border transition-all duration-300 cursor-pointer relative text-left flex items-start gap-3 hover:-translate-y-0.5 active:scale-95 ${
+                        isCurrentActive 
+                          ? 'border-[var(--accent)] bg-[var(--accent)]/5 shadow-md shadow-indigo-500/5' 
+                          : 'border-[var(--border-subtle)]/60 bg-[var(--bg-2)] hover:bg-[var(--bg-hover)] hover:border-[var(--border-subtle)] hover:shadow-sm'
+                      }`}
                     >
-                      <div className="w-1.5 h-1.5 rounded-full bg-[var(--accent)] opacity-60 group-hover:opacity-100 group-hover:scale-125 transition-all" />
-                      <span className="text-xs truncate font-semibold text-[var(--text-1)] group-hover:text-[var(--text-0)] transition-colors">
-                        {c.title || 'Nexus Query'}
-                      </span>
-                    </button>
-                    {onDeleteConversation && (
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (window.confirm('Delete this chat log?')) {
-                            onDeleteConversation(c.session_id);
-                          }
-                        }}
-                        className="p-1 text-[var(--text-2)] hover:text-rose-500 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all hover:bg-rose-500/10"
-                        title="Purge synapse"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    )}
-                  </div>
-                ))
+                      {/* Avatar container */}
+                      <div className={`w-7 h-7 rounded-xl flex items-center justify-center shrink-0 border transition-all ${
+                        isCurrentActive 
+                          ? 'bg-[var(--accent)] text-white border-indigo-400/20' 
+                          : 'bg-[var(--bg-1)] text-[var(--text-2)] border-[var(--border-subtle)]/40 group-hover:bg-[var(--accent)] group-hover:text-white group-hover:border-indigo-400/20'
+                      }`}>
+                        <MessageSquare size={12} className={isCurrentActive ? 'animate-pulse' : ''} />
+                      </div>
+
+                      <div className="flex-1 min-w-0 pr-6">
+                        <p className={`text-xs font-bold truncate leading-snug transition-colors ${
+                          isCurrentActive ? 'text-[var(--text-0)] font-black' : 'text-[var(--text-1)] group-hover:text-[var(--text-0)]'
+                        }`}>
+                          {c.title || 'Nexus Query'}
+                        </p>
+                        <span className="text-[8px] font-mono text-[var(--text-2)] block mt-0.5 uppercase tracking-wider">
+                          {formatSessionTime(c.updated_at) || 'Just now'}
+                        </span>
+                      </div>
+
+                      {onDeleteConversation && (
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Delete this chat log permanently?')) {
+                              onDeleteConversation(c.session_id);
+                            }
+                          }}
+                          className="absolute right-2 top-3.5 p-1 text-[var(--text-2)] hover:text-rose-500 hover:bg-rose-500/10 rounded-lg opacity-0 group-hover:opacity-100 focus:opacity-100 transition-all z-20"
+                          title="Delete thread"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>

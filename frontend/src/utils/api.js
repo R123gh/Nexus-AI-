@@ -171,6 +171,15 @@ export const apiDeleteSession = async (sessionId) => {
     return data;
 };
 
+export const apiClearConversations = async (userId) => {
+    const res = await fetch(`${API_BASE}/conversations/clear/${userId}`, {
+        method: 'DELETE'
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to clear conversations');
+    return data;
+};
+
 export const apiTool = async (toolId, payload, settings) => {
     let body;
     const headers = getHeaders(settings);

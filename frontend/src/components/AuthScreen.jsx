@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User, Lock, ArrowRight, Loader2, Sparkles, CheckCircle2, Eye, EyeOff, Zap, ShieldCheck } from 'lucide-react';
 import { apiLogin, apiRegister } from '../utils/api';
+import { motion, useMotionValue, useTransform } from 'framer-motion';
+import CustomCursor from './CustomCursor';
 
 const AuthScreen = ({ onLoginSuccess }) => {
   const [isLogin, setIsLogin] = useState(true);
@@ -11,9 +13,17 @@ const AuthScreen = ({ onLoginSuccess }) => {
   const [loading, setLoading] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
 
+  const x = useMotionValue(typeof window !== 'undefined' ? window.innerWidth / 2 : 500);
+  const y = useMotionValue(typeof window !== 'undefined' ? window.innerHeight / 2 : 500);
+
+  const rotateX = useTransform(y, [0, typeof window !== 'undefined' ? window.innerHeight : 1000], [12, -12]);
+  const rotateY = useTransform(x, [0, typeof window !== 'undefined' ? window.innerWidth : 1000], [-12, 12]);
+
   useEffect(() => {
     const handleMouseMove = (e) => {
       setMousePos({ x: e.clientX, y: e.clientY });
+      x.set(e.clientX);
+      y.set(e.clientY);
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
@@ -54,7 +64,8 @@ const AuthScreen = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="relative min-h-screen w-full flex items-center justify-center bg-[var(--bg-0)] overflow-hidden selection:bg-indigo-500/30">
+    <div className="relative min-h-screen w-full flex items-center justify-center bg-[var(--bg-0)] overflow-hidden selection:bg-indigo-500/30" style={{ perspective: 1200 }}>
+      <CustomCursor />
       {/* Dynamic Background Elements */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <div 
@@ -67,16 +78,24 @@ const AuthScreen = ({ onLoginSuccess }) => {
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] brightness-200" />
       </div>
 
-      {/* Main Card */}
-      <div className="relative z-10 w-full max-w-[480px] px-4 py-8 sm:px-6 sm:py-12 animate-in fade-in slide-in-from-bottom-12 duration-1000">
-        <div className="bg-[var(--bg-1)] backdrop-blur-3xl border border-[var(--border-subtle)] rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-[var(--shadow-xl)] relative overflow-hidden group">
-          
+      {/* Main 3D Card */}
+      <motion.div 
+        className="relative z-10 w-full max-w-[480px] px-4 py-8 sm:px-6 sm:py-12"
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        initial={{ opacity: 0, scale: 0.8, y: 100, rotateX: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0, rotateX: 0 }}
+        transition={{ type: "spring", stiffness: 100, damping: 20 }}
+      >
+        <div 
+          className="bg-[var(--bg-1)] backdrop-blur-3xl border border-[var(--border-subtle)] rounded-[2.5rem] p-6 sm:p-8 md:p-12 shadow-[var(--shadow-xl)] relative overflow-hidden group"
+          style={{ transform: "translateZ(30px)", transformStyle: "preserve-3d" }}
+        >
           {/* Subtle Inner Glow */}
           <div className="absolute -top-24 -right-24 w-48 h-48 bg-[var(--accent)]/10 blur-[60px] rounded-full group-hover:scale-150 transition-transform duration-700" />
           
-          {/* Brand Section */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-20 h-20 bg-[var(--accent-gradient)] rounded-3xl mb-8 shadow-2xl shadow-indigo-500/40 relative">
+          {/* Brand Section Floating */}
+          <div className="text-center mb-12" style={{ transform: "translateZ(60px)" }}>
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-[var(--accent-gradient)] rounded-3xl mb-8 shadow-2xl shadow-indigo-500/40 relative hover:scale-110 transition-transform duration-500">
               <Zap size={36} className="text-white fill-white animate-pulse" />
               <div className="absolute -inset-1 bg-white/20 rounded-3xl blur-sm -z-10" />
             </div>
@@ -89,7 +108,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
           </div>
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-5" style={{ transform: "translateZ(40px)" }}>
             <div className="space-y-4">
               <div className="group relative">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[var(--text-2)] group-focus-within:text-[var(--accent)] transition-colors">
@@ -101,7 +120,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete="username"
                   value={username}
                   onChange={e => setUsername(e.target.value)}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-4 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-4 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm shadow-inner focus:shadow-lg focus:-translate-y-0.5"
                 />
               </div>
 
@@ -115,7 +134,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
                   autoComplete={isLogin ? "current-password" : "new-password"}
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-12 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm"
+                  className="w-full bg-[var(--bg-input)] border border-[var(--border-subtle)] rounded-2xl py-4 pl-12 pr-12 text-[var(--text-0)] placeholder:text-[var(--text-2)] outline-none focus:border-[var(--accent)] transition-all font-bold text-base sm:text-sm shadow-inner focus:shadow-lg focus:-translate-y-0.5"
                 />
                 <button 
                   type="button"
@@ -128,15 +147,19 @@ const AuthScreen = ({ onLoginSuccess }) => {
             </div>
 
             {error && (
-              <div className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs text-center font-black uppercase tracking-widest animate-in zoom-in-95">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                className="p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl text-rose-400 text-xs text-center font-black uppercase tracking-widest"
+              >
                 {error}
-              </div>
+              </motion.div>
             )}
 
             <button 
               type="submit" 
               disabled={loading}
-              className="w-full h-14 bg-[var(--accent)] text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
+              className="w-full h-14 bg-[var(--accent)] text-white rounded-2xl font-black text-sm uppercase tracking-widest hover:scale-[1.02] active:scale-95 transition-all shadow-xl shadow-indigo-500/20 flex items-center justify-center gap-3 disabled:opacity-50 mt-4"
+              style={{ transform: "translateZ(50px)" }}
             >
               {loading ? (
                 <Loader2 size={24} className="animate-spin" />
@@ -150,7 +173,7 @@ const AuthScreen = ({ onLoginSuccess }) => {
           </form>
 
           {/* Toggle */}
-          <div className="mt-10 pt-8 border-t border-[var(--border-subtle)] text-center">
+          <div className="mt-10 pt-8 border-t border-[var(--border-subtle)] text-center" style={{ transform: "translateZ(20px)" }}>
             <button 
               onClick={() => { setIsLogin(!isLogin); setError(''); }}
               className="text-[var(--text-2)] text-xs font-bold uppercase tracking-widest hover:text-[var(--text-0)] transition-all group"
@@ -163,12 +186,12 @@ const AuthScreen = ({ onLoginSuccess }) => {
           </div>
 
           {/* Trust */}
-          <div className="mt-8 flex items-center justify-center gap-2 text-[var(--text-2)] text-[10px] font-black uppercase tracking-[0.2em] opacity-50">
+          <div className="mt-8 flex items-center justify-center gap-2 text-[var(--text-2)] text-[10px] font-black uppercase tracking-[0.2em] opacity-50" style={{ transform: "translateZ(10px)" }}>
             <ShieldCheck size={14} className="text-emerald-500" />
             Quantum Secured Link
           </div>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

@@ -33,6 +33,8 @@ import { MessageSquareText } from 'lucide-react';
 
 
 
+import CustomCursor from './components/CustomCursor';
+
 const App = () => {
   const [activeMode, setActiveMode] = useState('chat');
   const [messages, setMessages] = useState([]);
@@ -296,6 +298,21 @@ const App = () => {
     } catch (err) {
       console.error("Failed to delete conversation:", err);
       showToast('Purge failed.', 'error');
+    }
+  };
+
+  const handleClearAllConversations = async () => {
+    if (!user?.id) return;
+    if (!window.confirm('WARNING: Are you sure you want to permanently delete ALL conversation logs? This action cannot be undone.')) return;
+    try {
+      const { apiClearConversations } = await import('./utils/api');
+      await apiClearConversations(user.id);
+      showToast('All conversation histories cleared successfully.', 'warning');
+      handleNewChat();
+      loadConversations();
+    } catch (err) {
+      console.error("Failed to clear all conversations:", err);
+      showToast('Failed to clear conversations.', 'error');
     }
   };
 
@@ -769,7 +786,8 @@ const App = () => {
   }
 
   return (
-    <div className="flex h-screen bg-[var(--bg-0)] text-[var(--text-0)] overflow-hidden font-sans selection:bg-indigo-500/30" data-theme={settings.theme}>
+    <div className="flex h-screen bg-[var(--bg-0)] text-[var(--text-0)] overflow-hidden font-sans selection:bg-indigo-500/30">
+      <CustomCursor />
       <Background3D />
       
       {/* Mobile Sidebar Overlay */}
@@ -785,6 +803,7 @@ const App = () => {
         setActiveMode={handleSetMode}
         setShowSettings={setShowSettings}
         conversations={conversations}
+        sessionId={sessionId}
         onNewChat={handleNewChat}
         isOpen={sidebarOpen}
         user={user}
@@ -795,6 +814,7 @@ const App = () => {
         setShowAnalytics={() => setShowAnalytics(true)}
         onClose={() => setSidebarOpen(false)}
         onDeleteConversation={handleDeleteConversation}
+        onClearConversations={handleClearAllConversations}
       />
 
       {/* Sidebar Overlay (Mobile) */}

@@ -27,6 +27,12 @@ try:
         # Create a unique index for username
         mongo_users.create_index('username', unique=True)
         
+        # Drop the unique email index if it exists, as it prevents multiple users with null emails
+        try:
+            mongo_users.drop_index('email_1')
+        except Exception:
+            pass
+            
         mongo_messages = mongo_db['messages']
         mongo_messages.create_index([('session_id', 1), ('timestamp', 1)])
         mongo_messages.create_index('user_id')
@@ -569,6 +575,25 @@ class ConversationMemory:
         with self._lock:
             with self._get_conn() as conn:
                 conn.execute('DELETE FROM messages WHERE session_id = ?', (session_id,))
+                conn.commit()
+
+    def clear_user_conversations(self, user_id):
+        """Clear all conversations for a user."""
+        try:
+            if user_id is not None:
+                user_id = int(user_id)
+        except:
+            pass
+
+        if mongo_messages is not None:
+            try:
+                mongo_messages.delete_many({"user_id": user_id})
+            except Exception as e:
+                print(f"MongoDB delete user conversations failed: {e}. Falling back to SQLite.")
+
+        with self._lock:
+            with self._get_conn() as conn:
+                conn.execute('DELETE FROM messages WHERE user_id = ?', (user_id,))
                 conn.commit()
 
     def get_stats(self):
