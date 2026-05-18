@@ -316,27 +316,54 @@ const DataScience = ({ user }) => {
                         <p className="text-xs text-[var(--text-2)] max-w-xs">An error occurred during neural analysis. Please try re-uploading the dataset.</p>
                       </div>
                     ) : (
-                      <div className="min-w-[400px]">
-                        <div className="grid grid-cols-[100px_repeat(auto-fit,minmax(0,1fr))] gap-1">
+                      <div className="overflow-x-auto pb-4">
+                        <div 
+                          className="grid gap-1 min-w-[500px]"
+                          style={{
+                            gridTemplateColumns: `130px repeat(${dataInfo.numeric_cols.length}, minmax(32px, 1fr))`
+                          }}
+                        >
                           <div />
                           {(dataInfo.numeric_cols || []).map(col => (
-                            <div key={`h-${col}`} className="text-[8px] font-black text-[var(--text-2)] rotate-[-45deg] origin-left truncate h-12">
-                              {col}
+                            <div 
+                              key={`h-${col}`} 
+                              className="text-[9px] font-black text-[var(--text-2)] uppercase tracking-wider truncate text-center pb-2 select-none border-b border-[var(--border-subtle)]/30"
+                              title={col}
+                            >
+                              {col.length > 5 ? col.substring(0, 5) + '..' : col}
                             </div>
                           ))}
                           {(dataInfo.numeric_cols || []).map(col1 => (
                             <React.Fragment key={`r-${col1}`}>
-                              <div className="text-[8px] font-black text-[var(--text-2)] text-right pr-2 self-center truncate">{col1}</div>
+                              <div 
+                                className="text-[9px] font-black text-[var(--text-1)] text-right pr-3 self-center truncate uppercase tracking-wider select-none"
+                                title={col1}
+                              >
+                                {col1}
+                              </div>
                               {(dataInfo.numeric_cols || []).map(col2 => {
-                                const val = ((dataInfo.correlation || {})[col1] || {})[col2] || 0;
-                                const opacity = Math.abs(val);
+                                const val = ((dataInfo.correlation || {})[col1] || {})[col2];
+                                const numVal = typeof val === 'number' ? val : 0;
+                                const opacity = Math.abs(numVal);
                                 return (
                                   <div 
                                     key={`${col1}-${col2}`} 
-                                    className="aspect-square rounded-sm cursor-help hover:scale-125 transition-transform"
-                                    style={{ background: val > 0 ? `rgba(124, 58, 237, ${opacity})` : `rgba(239, 68, 68, ${opacity})` }}
-                                    title={`${col1} vs ${col2}: ${val.toFixed(2)}`}
-                                  />
+                                    className="aspect-square rounded-lg cursor-help hover:scale-125 hover:z-10 transition-all border border-[var(--border-subtle)]/40 bg-[var(--bg-2)] flex items-center justify-center relative group"
+                                    style={{ 
+                                      background: numVal > 0 
+                                        ? `rgba(99, 102, 241, ${0.1 + opacity * 0.9})` 
+                                        : numVal < 0 
+                                          ? `rgba(239, 68, 68, ${0.1 + opacity * 0.9})` 
+                                          : 'rgba(255, 255, 255, 0.02)' 
+                                    }}
+                                  >
+                                    <span className="text-[8px] font-black text-white/90 select-none group-hover:scale-110 transition-transform">
+                                      {numVal.toFixed(2)}
+                                    </span>
+                                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-[var(--bg-0)] border border-[var(--border-subtle)] rounded-lg text-[9px] font-black text-[var(--text-0)] shadow-2xl opacity-0 pointer-events-none group-hover:opacity-100 transition-opacity whitespace-nowrap z-30">
+                                      {col1} vs {col2}: <span className={numVal > 0 ? "text-indigo-400" : numVal < 0 ? "text-rose-400" : "text-[var(--text-2)]"}>{numVal.toFixed(4)}</span>
+                                    </div>
+                                  </div>
                                 );
                               })}
                             </React.Fragment>
