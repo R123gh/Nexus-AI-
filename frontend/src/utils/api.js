@@ -61,93 +61,140 @@ export const apiChat = async (messages, settings, userId, sessionId, systemPromp
 
 
 export const apiChatStream = async (messages, settings, userId, sessionId, onChunk) => {
-    const lastMessage = messages[messages.length - 1]?.content || '';
-    const history = messages.slice(0, -1);
-    
-    const res = await fetch(`${API_BASE}/chat/stream`, {
-        method: 'POST',
-        headers: getHeaders(settings),
-        body: JSON.stringify({ 
-            message: lastMessage,
-            history: history,
-            model: settings.model,
-            temperature: settings.temperature,
-            user_id: userId,
-            session_id: sessionId,
-            simple_chat: settings.simple_chat !== false,
-            system_prompt: settings.system_prompt || ''
-        })
-    });
-
-    if (!res.ok) {
-        const errData = await res.json().catch(() => ({ error: 'Stream request failed' }));
-        throw new Error(errData.error || 'Chat stream request failed');
-    }
-
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder('utf-8');
-    let fullResponse = '';
-    let lineBuffer = ''; // Buffer for partial SSE lines split across network chunks
-
-    while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+    try {
+        const lastMessage = messages[messages.length - 1]?.content || '';
+        const history = messages.slice(0, -1);
         
-        // Append decoded bytes to the line buffer
-        lineBuffer += decoder.decode(value, { stream: true });
+        const res = await fetch(`${API_BASE}/chat/stream`, {
+            method: 'POST',
+            headers: getHeaders(settings),
+            body: JSON.stringify({ 
+                message: lastMessage,
+                history: history,
+                model: settings.model,
+                temperature: settings.temperature,
+                user_id: userId,
+                session_id: sessionId,
+                simple_chat: settings.simple_chat !== false,
+                system_prompt: settings.system_prompt || ''
+            })
+        });
 
-        // Extract only complete lines — keep the last partial line in the buffer
-        const newlineIndex = lineBuffer.lastIndexOf('\n');
-        if (newlineIndex === -1) continue; // No complete line yet
+        if (!res.ok) {
+            throw new Error('Stream request failed');
+        }
 
-        const completeChunk = lineBuffer.slice(0, newlineIndex);
-        lineBuffer = lineBuffer.slice(newlineIndex + 1);
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let fullResponse = '';
+        let lineBuffer = '';
+        let chunkCount = 0;
 
-        const lines = completeChunk.split('\n');
-        
-        for (const line of lines) {
-            const trimmed = line.trim();
-            if (!trimmed.startsWith('data: ')) continue;
-
-            const dataStr = trimmed.substring(6).trim();
-            if (!dataStr || dataStr === '[DONE]') continue;
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
             
-            try {
-                const data = JSON.parse(dataStr);
-                if (data.error) throw new Error(data.error);
+            chunkCount++;
+            lineBuffer += decoder.decode(value, { stream: true });
+
+            const newlineIndex = lineBuffer.lastIndexOf('\n');
+            if (newlineIndex === -1) continue;
+
+            const completeChunk = lineBuffer.slice(0, newlineIndex);
+            lineBuffer = lineBuffer.slice(newlineIndex + 1);
+
+            const lines = completeChunk.split('\n');
+            
+            for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith('data: ')) continue;
+
+                const dataStr = trimmed.substring(6).trim();
+                if (!dataStr || dataStr === '[DONE]') continue;
                 
-                if (data.metadata) {
-                    onChunk(fullResponse, data);
-                }
-                
-                // Handle incremental token chunks
-                if (data.chunk) {
-                    fullResponse += data.chunk;
-                    onChunk(fullResponse, null);
-                } else if (data.content !== undefined && data.type === 'chunk') {
-                    fullResponse = data.content;
-                    onChunk(fullResponse, null);
-                }
-                
-                // Done signal — return immediately with the full response
-                if (data.done || data.type === 'done') {
-                    return { 
-                        response: data.response || data.full_response || fullResponse, 
-                        intent: data.intent || 'chat',
-                        actionResult: data.actionResult || data.action_result
-                    };
-                }
-            } catch (e) {
-                // Only log if it looks like valid data (not empty/whitespace)
-                if (dataStr.length > 2) {
-                    console.error('[SSE] Parse error:', e.message, '| Raw:', dataStr.slice(0, 120));
+                try {
+                    const data = JSON.parse(dataStr);
+                    if (data.error) throw new Error(data.error);
+                    
+                    if (data.metadata) {
+                        onChunk(fullResponse, data);
+                    }
+                    
+                    if (data.chunk) {
+                        fullResponse += data.chunk;
+                        onChunk(fullResponse, null);
+                    } else if (data.content !== undefined && data.type === 'chunk') {
+                        fullResponse = data.content;
+                        onChunk(fullResponse, null);
+                    }
+                    
+                    if (data.done || data.type === 'done') {
+                        return { 
+                            response: data.response || data.full_response || fullResponse, 
+                            intent: data.intent || 'chat',
+                            actionResult: data.actionResult || data.action_result
+                        };
+                    }
+                } catch (e) {
+                    console.warn("Error parsing chunk", e);
                 }
             }
         }
-    }
 
-    // Fallback — stream ended without a 'done' event (e.g. connection drop)
-    return { response: fullResponse, intent: 'chat' };
+        if (chunkCount === 0 || !fullResponse) {
+            throw new Error('Empty stream response, trigger fallback');
+        }
+
+        return {
+            response: fullResponse,
+            intent: 'chat'
+        };
+
+    } catch (streamErr) {
+        console.warn("SSE Chat Stream failed or empty, falling back to standard POST chat:", streamErr.message);
+        
+        try {
+            const lastMessage = messages[messages.length - 1]?.content || '';
+            const history = messages.slice(0, -1);
+            
+            const fallbackRes = await fetch(`${API_BASE}/chat`, {
+                method: 'POST',
+                headers: getHeaders(settings),
+                body: JSON.stringify({ 
+                    message: lastMessage,
+                    history: history,
+                    model: settings.model,
+                    temperature: settings.temperature,
+                    user_id: userId,
+                    session_id: sessionId || 'default-session',
+                    simple_chat: settings.simple_chat !== false,
+                    system_prompt: settings.system_prompt || ''
+                })
+            });
+
+            if (!fallbackRes.ok) {
+                const errData = await fallbackRes.json().catch(() => ({ error: 'Fallback request failed' }));
+                throw new Error(errData.error || 'Chat request failed');
+            }
+
+            const data = await fallbackRes.json();
+            
+            onChunk('', {
+                intent: data.intent || 'chat',
+                action_result: data.action_result
+            });
+            
+            onChunk(data.response || '', null);
+
+            return {
+                response: data.response || '',
+                intent: data.intent || 'chat',
+                actionResult: data.action_result
+            };
+        } catch (fallbackErr) {
+            throw fallbackErr;
+        }
+    }
 };
 
 export const apiGetConversations = async (userId) => {
