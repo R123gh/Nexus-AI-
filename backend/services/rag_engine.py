@@ -2,8 +2,6 @@ import os
 import json
 import uuid
 import time
-import chromadb
-from chromadb.utils import embedding_functions
 from utils.file_parser import extract_text_from_file
 
 # Paths
@@ -19,11 +17,19 @@ if not os.path.exists(META_FILE):
     with open(META_FILE, 'w') as f:
         json.dump([], f)
 
-# Initialize ChromaDB Client
-# Using PersistentClient for storage across restarts
-chroma_client = chromadb.PersistentClient(path=DB_PATH)
-# Default embedding function (all-MiniLM-L6-v2)
-embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+# Lazy ChromaDB Client Initialization
+_chroma_client = None
+_embedding_fn = None
+
+def get_chroma_client():
+    global _chroma_client, _embedding_fn
+    if _chroma_client is None:
+        import chromadb
+        from chromadb.utils import embedding_functions
+        _chroma_client = chromadb.PersistentClient(path=DB_PATH)
+        _embedding_fn = embedding_functions.DefaultEmbeddingFunction()
+    return _chroma_client, _embedding_fn
+
 
 def get_kbs():
     """Retrieve all knowledge base metadata."""
@@ -40,9 +46,10 @@ def save_kbs(kbs):
 
 def get_kb_collection(kb_id):
     """Get or create a ChromaDB collection for a specific KB."""
-    return chroma_client.get_or_create_collection(
+    client, fn = get_chroma_client()
+    return client.get_or_create_collection(
         name=f"kb_{kb_id}",
-        embedding_function=embedding_fn
+        embedding_function=fn
     )
 
 def create_kb(name, description):
@@ -122,7 +129,8 @@ def delete_kb(kb_id):
     save_kbs(kbs)
     
     try:
-        chroma_client.delete_collection(name=f"kb_{kb_id}")
+        client, _ = get_chroma_client()
+        client.delete_collection(name=f"kb_{kb_id}")
     except:
         pass
     return True
