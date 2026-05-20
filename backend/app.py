@@ -8,6 +8,15 @@ by the Node.js server on port 5000.
 from gevent import monkey
 # Patch all but keep threads manageable for library compatibility (like pymongo)
 monkey.patch_all()
+
+# Monkey patch sqlite3 with pysqlite3 for compatibility with ChromaDB in deployed environments (e.g. Render)
+try:
+    __import__('pysqlite3')
+    import sys
+    sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+except ImportError:
+    pass
+
 import os
 import sys
 import logging

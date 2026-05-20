@@ -16,3 +16,4 @@ gunicorn
 youtube-transcript-api
 chromadb
 pdfplumber
+pysqlite3-binary
