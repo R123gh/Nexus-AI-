@@ -70,6 +70,7 @@ const KnowledgeBases = ({ onSelectKB, user }) => {
       fetchKBs();
     } catch (e) {
       console.error(e);
+      createNotification(user?.id, 'Failed to Create KB', e.message || 'Could not initialize Knowledge Base.', 'error');
     } finally {
       setLoading(false);
     }
@@ -84,6 +85,7 @@ const KnowledgeBases = ({ onSelectKB, user }) => {
       fetchKBs();
     } catch (e) {
       console.error(e);
+      createNotification(user?.id, 'Failed to Delete KB', e.message || 'Could not remove Knowledge Base.', 'error');
     }
   };
 
@@ -95,6 +97,7 @@ const KnowledgeBases = ({ onSelectKB, user }) => {
       fetchKBs();
     } catch (e) {
       console.error(e);
+      createNotification(user?.id, 'Failed to Delete Document', e.message || 'Could not remove document from index.', 'error');
     }
   };
 
@@ -108,6 +111,7 @@ const KnowledgeBases = ({ onSelectKB, user }) => {
       fetchKBs();
     } catch (e) {
       console.error(e);
+      createNotification(user?.id, 'Indexing Failed', e.message || 'Could not upload and vectorize document.', 'error');
     } finally {
       setUploading(false);
     }

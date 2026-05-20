@@ -312,6 +312,10 @@ export const apiDocumentUpload = async (file, message, settings, sessionId, user
 // Knowledge Base APIs
 export const apiGetKBs = async () => {
     const res = await fetch(`${API_BASE}/rag/list`);
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Failed to retrieve Knowledge Bases' }));
+        throw new Error(errData.error || `HTTP error ${res.status}`);
+    }
     const data = await res.json();
     return Array.isArray(data) ? data : (data.kbs || []);
 };
@@ -322,7 +326,11 @@ export const apiCreateKB = async (name, description) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, description })
     });
-    return await res.json();
+    const data = await res.json().catch(() => ({ error: 'Invalid response from server' }));
+    if (!res.ok) {
+        throw new Error(data.error || 'Failed to create Knowledge Base');
+    }
+    return data;
 };
 
 export const apiUploadKB = async (kbId, file) => {
@@ -332,14 +340,22 @@ export const apiUploadKB = async (kbId, file) => {
         method: 'POST',
         body: formData
     });
-    return await res.json();
+    const data = await res.json().catch(() => ({ error: 'Invalid upload response' }));
+    if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+    }
+    return data;
 };
 
 export const apiDeleteKB = async (kbId) => {
     const res = await fetch(`${API_BASE}/rag/${kbId}/delete`, {
         method: 'DELETE'
     });
-    return await res.json();
+    const data = await res.json().catch(() => ({ error: 'Failed to delete index' }));
+    if (!res.ok) {
+        throw new Error(data.error || 'Deletion failed');
+    }
+    return data;
 };
 
 export const apiDeleteKBFile = async (kbId, filename) => {
@@ -348,11 +364,19 @@ export const apiDeleteKBFile = async (kbId, filename) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ filename })
     });
-    return await res.json();
+    const data = await res.json().catch(() => ({ error: 'Failed to delete file from index' }));
+    if (!res.ok) {
+        throw new Error(data.error || 'File deletion failed');
+    }
+    return data;
 };
 
 export const apiGetKBChunks = async (kbId) => {
     const res = await fetch(`${API_BASE}/rag/${kbId}/chunks`);
+    if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Failed to fetch semantic chunks' }));
+        throw new Error(errData.error || `HTTP error ${res.status}`);
+    }
     return await res.json();
 };
 

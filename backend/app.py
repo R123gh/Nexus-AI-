@@ -102,11 +102,25 @@ app.register_blueprint(webhooks_bp,      url_prefix='/api/webhooks')
 # ─── Health Check ────────────────────────────────────────────
 @app.route('/api/python/health')
 def health():
+    import sqlite3
+    chroma_status = 'unknown'
+    chroma_error = None
+    try:
+        import chromadb
+        chroma_status = 'available'
+    except Exception as e:
+        chroma_status = 'failed'
+        chroma_error = str(e)
+
     from services.memory import memory
     return jsonify({
         'status': 'ok',
         'service': 'NexusAI Python Microservice',
         'port': 5001,
+        'sqlite_version': sqlite3.sqlite_version,
+        'sqlite_module': sqlite3.__file__ if hasattr(sqlite3, '__file__') else 'built-in',
+        'chromadb_status': chroma_status,
+        'chromadb_error': chroma_error,
         'memory': memory.get_stats(),
     })
 
